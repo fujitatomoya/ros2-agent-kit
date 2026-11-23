@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Draft v0.5 for review |
+| Status | Draft v0.6 for review |
 | Date | 2026-11-23 |
 | Owner | Tomoya Fujita |
 | Repository | <https://github.com/fujitatomoya/ros2-agent-kit> |
@@ -16,7 +16,7 @@ This document follows the ROS documentation style: one sentence per line, ATX he
 
 `ros2-agent-kit` is a set of agent skills, hooks, and checks dedicated to ROS 2 development.
 It targets Claude Code, Codex, and Gemini CLI from one source tree.
-It covers two jobs: building ROS 2 applications, and contributing issues and pull requests to the ROS 2 mainline.
+It covers three jobs: building ROS 2 applications, contributing issues and pull requests to the ROS 2 mainline, and recurring maintainer work such as launching CI on ci.ros2.org.
 
 Its distinguishing feature is contribution compliance.
 It encodes the ROS code style, the DCO sign-off, the OSRF generative-tools policy, and the upstream issue and PR templates as machine-checkable rules, and it enforces them before anything reaches a maintainer.
@@ -54,6 +54,15 @@ That creates two risks: the content drifts from mainline, and the project stops 
 ECC is a good general harness, and this kit should compose with it, not replace it.
 ROS 2 needs things a general kit cannot know: `ament_lint` as the style oracle, rolling-first branching, ABI rules, the upstream templates, and a policy that restricts what an agent may write.
 
+### 2.4 Maintainer toil
+
+Maintainers have their own repetitive work that no existing pack covers.
+One example is launching CI on ci.ros2.org for a pull request.
+The official `ros-ci-for-pr` tool needs an explicit package list, and for a PR in a repository with many packages, such as `ros2/demos#806`, that list is assembled by reading the diff and mapping each file to its `package.xml` by hand.
+The invocations also vary in target distribution, bundled PRs, build and test sets, and extra arguments, so a fixed form such as a `workflow_dispatch` button does not fit.
+An agent can derive the package list deterministically, compose the command, and ask the maintainer to confirm it.
+The kit therefore includes maintainer workflows as a third job, built on the same principles as the contribution workflow.
+
 ## 3. Goals and non-goals
 
 ### 3.1 Goals
@@ -65,6 +74,7 @@ ROS 2 needs things a general kit cannot know: `ament_lint` as the style oracle, 
 5. Every rule is traceable to an upstream source and is re-verified when that source changes.
 6. Every skill is owned by the project owner, who maintains the related upstream code.
    Other owners may be added in a later phase.
+7. Recurring maintainer workflows, starting with CI on ci.ros2.org, run through natural language using the official tool and the maintainer's own credentials.
 
 ### 3.2 Non-goals
 
@@ -74,6 +84,9 @@ ROS 2 needs things a general kit cannot know: `ament_lint` as the style oracle, 
 3. Submitting pull requests, issues, or review replies on the human's behalf.
 4. Duplicating general skills such as TDD or generic code review.
 5. Replacing human review or the DCO attestation.
+6. Forking or replacing upstream maintainer tools such as `ros-ci-for-pr`; improvements go upstream.
+7. Storing or managing credentials; tokens and ci.ros2.org access stay in the user's environment.
+8. Triggering CI from GitHub comments, which needs workflows in the upstream repositories.
 
 ## 4. Design principles
 
@@ -104,14 +117,18 @@ A skill that cannot be kept current is removed.
 All logic lives in harness-neutral files.
 Per-harness files only translate formats.
 
+**P8. Wrap, do not fork.**
+Maintainer skills orchestrate the official tool as installed.
+They read its `--help` at run time instead of hardcoding flags, and improvements are sent upstream so the kit stays correct without lock-step releases.
+
 ## 5. Users and use cases
 
 | Persona | Typical task | What the kit does |
 | --- | --- | --- |
 | Application developer | Create a package, node, launch file, tests | Scaffolds to ROS conventions, runs linters and tests |
 | First-time contributor | Fix a bug in `rclcpp` | Preflight on the issue, style, sign-off, PR packet |
-| Regular contributor | Feature plus backport | Rolling-first flow, ABI checks, backport title format |
-| Maintainer | Triage and review | Read-only assistance; the maintainer writes all replies |
+| Regular contributor | Feature plus backport | Rolling-first flow, ABI checks, backport title format, a ready-to-run CI command to hand to a maintainer |
+| Maintainer | Triage, review, CI | Read-only assistance for triage; CI jobs on ci.ros2.org with detected packages and confirmation; the maintainer writes all replies |
 | Any contributor on another tool | Any of the above | Git hooks and the CI action still apply |
 
 ## 6. Architecture
@@ -146,6 +163,7 @@ flowchart LR
 `ros2-gate` is a single command-line tool written in Python with the standard library only.
 ROS 2 environments always have `python3`, so it needs no installation step inside the plugin.
 It makes no network calls and never modifies files unless a subcommand says so.
+Helpers that need the GitHub API, such as package detection, live in `tools/` and stay out of the gate engine, see section 6.6.
 
 | Subcommand | Purpose |
 | --- | --- |
@@ -228,6 +246,16 @@ The kit does not ship copies of upstream templates.
 It reads `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/` from the target repository, and falls back to the organization defaults in `ros2/.github`.
 This removes one whole class of drift.
 
+### 6.6 Network helpers in `tools/`
+
+Some maintainer workflows need the GitHub API, for example to list the files changed by a pull request that is not checked out locally.
+Those helpers live in `tools/`, are stdlib-only Python like the gate engine, and are read-only against GitHub.
+They are the only code in the kit that touches the network, and every call uses the user's ambient token.
+Keeping them out of `ros2-gate` preserves the guarantee that hooks and CI gates never make network calls.
+
+The first helper is `detect_packages.py`, described in section 8.6.
+It has a local mode that reads `git diff` against the merge base and walks the working tree for `package.xml`, so contribution skills can use it without any network access.
+
 ## 7. Components
 
 ### 7.1 Skills
@@ -244,9 +272,22 @@ All three harnesses discover `skills/<name>/SKILL.md` at the package root.
 | `pr-prepare` | Build the PR packet, see section 8.2 | M1 |
 | `issue-report` | Choose the tracker, search duplicates, gather environment facts, see section 8.3 | M1 |
 | `review-respond` | Explain review comments and implement code changes; never drafts replies | M2 |
-| `backport` | Rolling-first rule, backport title format, API and ABI checks | M2 |
+| `backport` | Rolling-first rule, backport title format, API and ABI checks, optional hand-off to `ci-trigger` | M2 |
 | `api-abi-stability` | Public API, ABI, tick-tock deprecation, no deprecations after a distribution release | M2 |
+
+**Maintainer workflows**
+
+| Skill | What it does | Milestone |
+| --- | --- | --- |
+| `ci-trigger` | Launch ci.ros2.org jobs for one or more PRs with `ros-ci-for-pr`, packages detected from the diffs, command confirmed before it runs, see section 8.6 | M1 |
 | `maintainer-triage` | Read-only help for triage and review; output is context for the maintainer's own words | M4 |
+| `ci-status` | Summarize the state of jobs launched for a PR, from the badge comment or the Jenkins API | M4 |
+| `buildfarm-triage` | Fetch and summarize build.ros2.org and ci.ros2.org failure logs for a package | M4 |
+| `rosdistro-release` | Walk through a bloom release and the `ros/rosdistro` index and release PRs with their checklists | M4 |
+| `contribution-report` | Wrap `ros-github-contribution-report` from the same upstream package as `ros-ci-for-pr` | M4 |
+
+Maintainer skills are plain `SKILL.md` directories plus helper scripts, so they work on all three harnesses without adapters.
+Their descriptions name the phrasings maintainers actually use, such as "buildfarm", "ci.ros2.org", and "Jenkins", and the trigger tests in section 12 cover those phrasings.
 
 **Code rules**
 
@@ -291,7 +332,7 @@ They must stay fast and narrow so that they coexist with other plugins' hooks, f
 
 Skills can be invoked directly in Claude Code and Codex, so they need no separate command files there.
 Gemini CLI gets thin TOML wrappers in `commands/`.
-The command surface is kept small: `preflight`, `pr-prepare`, `issue-report`, and `doctor`.
+The command surface is kept small: `preflight`, `pr-prepare`, `issue-report`, `ci-trigger`, and `doctor`.
 
 ### 7.4 Subagents
 
@@ -310,6 +351,7 @@ Two are planned: a read-only `contribution-auditor` that runs before the PR pack
 | PR description | Fill factual fields and the disclosure field | Write the summary or rationale |
 | Issue body | Insert verbatim command output | Write the description, reproduction, or expected and actual behavior |
 | Replies on GitHub, Discourse, Zulip | Help the human understand the comment | Draft or post the reply |
+| CI jobs on ci.ros2.org | Detect packages, compose the command, run it after confirmation | Launch without confirmation, or post badge comments unless asked |
 
 ### 8.2 PR packet
 
@@ -371,6 +413,51 @@ The gate neither rejects nor rewrites it.
 - Changes to the RMW API require updating the tier 1 RMW implementations.
 - Respond to review within about one week.
 
+### 8.6 CI on ci.ros2.org
+
+Core maintainers launch Jenkins jobs on ci.ros2.org for pull requests with `ros-ci-for-pr` from `ros-tooling/ros-github-scripts`.
+The tool works well, but it needs an explicit `--packages` list, and every invocation differs in target distribution, bundled PRs, build set versus test set, extra colcon arguments, and whether to post status badges.
+The `ci-trigger` skill removes that friction without replacing the tool.
+
+The skill works in four phases.
+
+1. Parse the request into PRs, target distribution, package selection, test-only subset, and extra arguments.
+   It accepts URLs, `org/repo#N`, and shorthand, and asks one question only when something is ambiguous.
+   When the PR targets a distribution branch, that distribution is used and stated.
+2. Detect the affected packages with `tools/detect_packages.py` when the user did not list them, and show the list grouped by PR so the user can trim it.
+3. Compose the `ros-ci-for-pr` command, show it, and wait for confirmation.
+4. Run it and report the gist URL, the Jenkins job links, and any failure with its likely cause.
+
+Package detection is deterministic code, not model inference, following P3.
+The script fetches each PR's changed files, lists the PR head tree, finds every `package.xml`, maps each file to its deepest enclosing package directory, and reads the package name from that `package.xml`.
+Directory names are not trusted, because they can differ from the package name.
+Files with no enclosing package are reported and skipped, and a truncated tree listing produces a warning instead of a silently short list.
+The output is a union across PRs, one name per line, so it is also usable on its own:
+
+```bash
+ros-ci-for-pr --packages $(python3 tools/detect_packages.py ros2/demos#806)
+```
+
+Only flags verified against upstream are written into the skill: `--target`, `--pulls`, `--packages`, `--build`, `--comment`, `--branch`, and `--colcon-build-args`.
+For anything else the skill reads `ros-ci-for-pr --help` at run time, following P8.
+An unsupported target distribution is surfaced as the upstream error with guidance to update the installed tool; the kit does not install from forks.
+
+Launching CI is a privileged action.
+It consumes a shared build farm, and `-c` posts a public badge comment on each PR.
+The skill therefore always shows the exact command and waits for an explicit go-ahead.
+A standing "just run it" is honored within one session and never carried across sessions.
+Badges are posted only when the user asks for them.
+
+Credentials are never stored or echoed.
+The skill uses the ambient `GITHUB_ACCESS_TOKEN`, falls back to `gh auth token` for package detection only, and lets `ros-ci-for-pr` handle Jenkins authentication.
+The README documents the minimum classic token scopes, `public_repo`, `gist`, and `read:org`, and notes that fine-grained tokens do not work for job creation.
+If the installed tool prompts for Jenkins credentials interactively, the user answers in the terminal, and the skill must not capture what is entered.
+Prerequisites are verified once per session on first use, and the skill offers setup help instead of failing cold.
+A user without ci.ros2.org access still gets package detection and the composed command, and can hand that command to a maintainer.
+
+Re-runs are common, for example "same but on rolling" or "add rcl_action to the test set".
+The skill reuses the previous command from the conversation, applies the delta, and goes through confirmation again.
+
 ## 9. Multi-harness packaging
 
 ### 9.1 Capability matrix
@@ -400,7 +487,10 @@ ros2-agent-kit/
 │   ├── profiles/                # osra-ros2.yaml, app.yaml, generic-dco.yaml
 │   └── sources.yaml             # upstream documents and last-verified dates
 ├── gate/
-│   ├── ros2_gate/               # stdlib-only Python package
+│   ├── ros2_gate/               # stdlib-only Python package, no network
+│   └── tests/
+├── tools/
+│   ├── detect_packages.py       # GitHub API helpers, read-only, network allowed
 │   └── tests/
 ├── adapters/
 │   ├── claude_codex_hook.py     # stdin JSON -> ros2-gate guard
@@ -470,6 +560,7 @@ Until that happens, the README states that this is a personal project and not ye
 | `ros2/ros2#1887`, org-wide `AGENTS.md` | Open, nothing merged | The shared default belongs in `ros2/.github`; the kit carries a draft until it lands, see below |
 | `ros2/ros2#1884`, PR template check workflow | Draft | `check-pr-body` should reuse or back this workflow, not compete with it |
 | MoveIt `AGENTS.md` pull requests | Status not verified | Candidate for a satellite pack |
+| `ros-tooling/ros-github-scripts`, `ros-ci-for-pr` | Maintained; each new distribution needs a patch to its distribution table | Orchestrated as installed; package auto-detection is proposed upstream as `--packages auto`, and the kit keeps its own script until that lands |
 
 `AGENTS.md` and the kit are complementary.
 `AGENTS.md` is short, always loaded, and lives in each repository.
@@ -532,6 +623,8 @@ The project is kept ready for donation from the first commit:
 | --- | --- | --- |
 | Gate engine | Unit tests with fixture commits, PR bodies, and issue bodies | Every PR |
 | Hook adapters | Recorded stdin payloads per harness | Every PR |
+| Package detection | Unit tests with recorded API fixtures: nested packages, files outside any package, deleted files, fork heads, deleted forks, truncated trees | Every PR |
+| Package detection, live | One smoke test against a known multi-package PR with an expected package set | Every release |
 | Skill triggering | A list of prompts that must and must not activate each skill | Every release |
 | Skill effect | Paired runs with the skill on and off, on a small set of real tasks | Every release |
 | End to end | A scripted contribution to a throwaway fork | Every release |
@@ -542,8 +635,12 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 ## 13. Security and safety
 
 - Hooks execute code on the developer's machine, so the gate engine has no third-party dependencies and no network access.
+- The only network code is in `tools/`, it is read-only against GitHub, and it never runs from a hook.
 - Gates never rewrite history or files silently; fixes are explicit commands.
 - Issue and PR text fetched from GitHub is untrusted input, and skills tell the agent to treat it as data, not instructions.
+- Package detection reads PR head content from contributor forks; it extracts only package names, feeds them into a command the user reviews, and never treats file contents as instructions.
+- Launching CI is privileged: the exact command is shown and confirmed every time, badges are opt-in, and a standing approval never crosses a session boundary.
+- The kit stores no credentials; tokens and ci.ros2.org access are ambient, the README lists the minimum token scopes, and skills must not echo or persist a token.
 - Releases are tagged and signed, and Codex users re-review hooks on each update by design.
 - The evidence ledger stays local and is never uploaded.
 
@@ -552,10 +649,10 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | Milestone | Content | Exit criterion |
 | --- | --- | --- |
 | M0 | Repository, governance files, `osra-ros2` profile, `ros2-gate` with G1, G3, G4, Claude Code packaging, the packaging spike from section 9.3 | Gates pass their unit tests and block a bad commit in Claude Code |
-| M1 | Contribution skills, Codex and Gemini packaging, tier C git hooks and GitHub Action | One real upstream PR prepared end to end on each harness |
+| M1 | Contribution skills, `ci-trigger` with package detection, Codex and Gemini packaging, tier C git hooks and GitHub Action | One real upstream PR prepared end to end on each harness, and one CI run launched for a multi-package PR |
 | M2 | Code-rule skills, evidence ledger with G2, review and backport skills, evaluation harness | Lint and test evidence enforced before push |
 | M3 | Application development skills, distribution matrix in CI | A new package built and tested on every active distribution |
-| M4 | Maintainer skills; review whether to open the project to other owners | Decision recorded in this document |
+| M4 | Maintainer skills: `maintainer-triage`, `ci-status`, `buildfarm-triage`, `rosdistro-release`, `contribution-report`; review whether to open the project to other owners | Decision recorded in this document |
 | Later | Propose donation to the ROS 2 mainline | Accepted by the PMC |
 
 ## 15. Risks
@@ -568,6 +665,8 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | Contributors disable hooks | Tier C in CI is independent of the contributor's tool |
 | Scope creep into ecosystem stacks | Out of scope for the core; satellite packs deferred |
 | Single maintainer | Small core, source watch job, removal of skills that fall behind |
+| `ros-ci-for-pr` lags a new distribution | Surface the upstream error with update guidance; do not install from forks |
+| A CI run is launched by mistake and consumes the shared build farm | Confirmation on every run; badges opt-in; no cross-session approval |
 
 ## 16. Decisions and open questions
 
@@ -584,11 +683,17 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | 2026-11-23 | The repository is `github.com/fujitatomoya/ros2-agent-kit`. |
 | 2026-11-23 | The plugin is named `ros2`, giving commands such as `/ros2:pr-prepare`. |
 | 2026-11-23 | The intent is to donate the project to the ROS 2 mainline at some point; it is kept donation-ready from the first commit. |
+| 2026-11-23 | Maintainer workflows that orchestrate official tooling are in scope, starting with `ci-trigger`; the kit never forks the tool it wraps. |
+| 2026-11-23 | Package detection is deterministic code in `tools/`, outside `ros2-gate`, because it uses the GitHub API. |
+| 2026-11-23 | Output generated by an upstream tool that the human confirmed and ran, such as the status badges of `ros-ci-for-pr -c` or a bloom release PR, is not agent authorship; P4 and G3 do not apply to it, and the confirmation rule in section 8.6 does. |
+| 2026-11-23 | An unsupported target distribution is surfaced as the upstream error with guidance; the kit does not install from forks. |
+| 2026-11-23 | Package auto-detection is proposed upstream to `ros-github-scripts`; the kit keeps its own script until that lands, as it does with the `AGENTS.md` draft. |
 
 ### 16.2 Open
 
 No design questions are open.
 The items marked "to be confirmed" in section 9 are validated during M0 and M1.
+How the installed `ros-ci-for-pr` authenticates to Jenkins, and whether that works inside an agent session, is confirmed in M1 before `ci-trigger` ships.
 
 ## 17. Sources
 
@@ -600,6 +705,9 @@ The items marked "to be confirmed" in section 9 are validated during M0 and M1.
 - Code style and language versions: <https://github.com/ros2/ros2_documentation/blob/rolling/source/The-ROS2-Project/Contributing/Contributing-to-code/Code-Style-Language-Versions.rst>
 - Reporting an issue: <https://github.com/ros2/ros2_documentation/blob/rolling/source/The-ROS2-Project/Contributing/Reporting-an-issue.rst>
 - Organization PR and issue templates: <https://github.com/ros2/.github>
+- `ros-tooling/ros-github-scripts`, home of `ros-ci-for-pr`: <https://github.com/ros-tooling/ros-github-scripts>
+- ROS 2 CI server: <https://ci.ros2.org>
+- Example multi-package PR for the package-detection smoke test: <https://github.com/ros2/demos/pull/806>
 - Adopt `AGENTS.md` org-wide: <https://github.com/ros2/ros2/issues/1887>
 - Closed `rclcpp` draft of `AGENTS.md`: <https://github.com/ros2/rclcpp/pull/3366>
 - Claude Code plugins: <https://code.claude.com/docs/en/plugins>
