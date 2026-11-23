@@ -1,0 +1,50 @@
+name: source-watch
+
+# Fetches every upstream document listed in policy/sources.json weekly and
+# opens an issue when one changed since it was last verified (design section
+# 11.2). The target is to reflect a policy change within 14 days.
+on:
+  schedule:
+    - cron: "23 5 * * 2"
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: compare hashes
+        id: watch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          python3 tools/watch_sources.py --json > watch.json
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          cat watch.json
+      - name: open an issue when a source changed
+        if: steps.watch.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body="$(python3 - <<'PY'
+          import json
+          d = json.load(open('watch.json'))
+          lines = ['An upstream document that a policy rule depends on changed, or could not be fetched.',
+                   'Re-verify the rules that cite it within 14 days, then run `python3 tools/watch_sources.py --update` and commit `policy/sources.json`.', '']
+          for c in d['changed']:
+              lines.append(f"- changed: `{c['id']}` {c['url']} (last verified {c['verified']})")
+          for e in d['errors']:
+              lines.append(f"- fetch error: `{e['id']}` {e['url']}: {e['error']}")
+          print('\n'.join(lines))
+          PY
+          )"
+          existing="$(gh issue list --label source-watch --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "Upstream policy source changed" --label source-watch --body "$body"
+          fi

@@ -85,9 +85,11 @@ def _builtin_checks(path: str, kind: str, report: Report) -> None:
             if line.strip().startswith('```'):
                 in_fence = not in_fence
                 continue
-            if in_fence or line.startswith('    '):
+            if in_fence or line.startswith('    ') or line.lstrip().startswith('#'):
                 continue
-            if _SENTENCE_BREAK.search(line.strip()):
+            # Drop a list marker or enumerator such as "1. " before looking for a break.
+            text = re.sub(r'^\s*(?:[-*+]|\d+\.)\s+', '', line)
+            if _SENTENCE_BREAK.search(text.strip()):
                 multi.append(i)
             continue
         if len(line) > MAX_COLUMNS:

@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Draft v0.10, M3 implemented |
+| Status | Draft v1.0, M0 to M4 implemented |
 | Date | 2026-11-23 |
 | Owner | Tomoya Fujita |
 | Repository | <https://github.com/fujitatomoya/ros2-agent-kit> |
@@ -353,8 +353,9 @@ Skills refer to the kit's files through `${CLAUDE_PLUGIN_ROOT:-.}`, which Claude
 ### 7.4 Subagents
 
 Subagent formats differ across harnesses, and Gemini's are a preview feature.
-Subagents are therefore optional and arrive late.
-Two are planned: a read-only `contribution-auditor` that runs before the PR packet, and a `style-reviewer`.
+Subagents are therefore optional and arrived last.
+Two exist in `agents/`: a read-only `contribution-auditor` that runs the gate, the evidence check, and the lint on a branch before the PR packet, and a read-only `style-reviewer` that applies the style skills to a diff.
+Both are Markdown files with `name`, `description`, and `tools` front matter, limited to read-only tools plus `Bash` for the gate commands, and both are told never to run a write command.
 
 ## 8. Upstream contribution workflow
 
@@ -610,13 +611,15 @@ The built-in draft in `templates/AGENTS.md` exists only until the organization d
 
 This is a personal project, and in this phase the project owner is the sole owner of every skill and profile.
 Nobody else is invited to own or contribute content yet.
+The M4 review of whether to open the project to other owners is the owner's decision and is recorded in section 16.1 when made; the implementation does not presume it.
 The scope is therefore limited to what one ROS 2 maintainer can keep current: the `ros2` organization and the core client libraries.
 A skill that falls behind mainline for one release cycle is removed.
 
 ### 11.2 Keeping pace with mainline
 
-1. `policy/sources.yaml` lists every upstream document a rule depends on, with a content hash and a last-verified date.
-2. A scheduled CI job fetches those documents and opens an issue when one changes.
+1. `policy/sources.json` lists every upstream document a rule depends on, with a content hash and a last-verified date.
+   For a GitHub repository the hash is the tree SHA of the default branch; for a web page it is a hash of the visible text with markup and whitespace removed.
+2. The scheduled `source-watch` workflow runs `tools/watch_sources.py` weekly and opens or updates a `source-watch` issue when a hash differs or a fetch fails.
 3. The target is to reflect a policy change within 14 days.
 4. CI runs the gate tests and the application skill checks against Docker images of every active distribution in REP-2000, plus Rolling.
    The matrix is generated from `policy/distributions.json`; the application check is `evals/app_smoke.sh`, which creates packages the way the `workspace-and-packages` skill says, builds them, and runs `colcon test` with the linters inside `ros:<distro>-ros-base`.
@@ -735,12 +738,15 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | 2026-11-23 | Skill evaluations use `claude plugin eval` cases under `evals/` rather than a custom runner. |
 | 2026-11-23 | Active distributions live in `policy/distributions.json`, shared by the `backport` skill and the CI matrix, with a verified date. |
 | 2026-11-23 | The application skill check is a package-creation smoke test per distribution, because it exercises the exact commands the skills give and needs no model call. |
+| 2026-11-23 | Maintainer skills that read Jenkins use its public JSON API through `curl`, read-only, and never post; re-runs go through `ci-trigger` with confirmation. |
+| 2026-11-23 | The source watch stores a tree SHA for repositories and a text hash for pages, and updates an existing `source-watch` issue instead of opening a new one each week. |
 
 ### 16.2 Open
 
 No design questions are open.
 The hook-file question of section 9.3 was settled in M0.
-The generated Gemini branch and the Jenkins credential handling of section 8.6 are validated in M1.
+Three items await a real-world run that only the owner can do: the generated Gemini branch and the Jenkins credential handling of section 8.6 (M1 exit criteria), the first `claude plugin eval` run of `evals/`, and the first pass of the distribution matrix on GitHub.
+The ownership review of M4 is recorded in section 16.1 when the owner decides.
 How the installed `ros-ci-for-pr` authenticates to Jenkins, and whether that works inside an agent session, is confirmed in M1 before `ci-trigger` ships.
 
 ## 17. Sources

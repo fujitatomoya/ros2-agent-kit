@@ -1,35 +1,37 @@
 {
-  "_comment": "Every upstream document a rule depends on. The scheduled source-watch job (design section 11.2) fetches each URL, compares sha256 with the stored value, and opens an issue on change. sha256 is null until the watch job lands.",
+  "_comment": "Every upstream document a rule depends on. The weekly source-watch workflow runs tools/watch_sources.py, which fetches url (or watch_url when the canonical page blocks automated clients), compares the hash with sha256, and opens an issue on change. Run tools/watch_sources.py --update after re-verifying.",
   "sources": {
     "osrf-genai-policy": {
       "title": "OSRF policy on the use of generative tools in contributions",
       "url": "https://osralliance.org/osrf-policy-on-the-use-of-generative-tools-in-contributions/",
       "verified": "2026-11-23",
-      "sha256": null
+      "sha256": "text:3819707752f80f92b90f4bf715e457edfee613bd46838d9f5e5674dfcc397ea0",
+      "watch_url": "https://discourse.openrobotics.org/t/osrf-adopts-an-updated-policy-on-use-of-genai-llm-tools-in-contributions/59685",
+      "watch_note": "osralliance.org returns 403 to automated clients; the policy announcement thread on Discourse is watched instead, and a change there means re-reading the policy page by hand."
     },
     "ros-pmc-ai-guidelines": {
       "title": "Guidelines for AI-assisted contributions in the ROS project",
       "url": "https://discourse.openrobotics.org/t/guidelines-for-ai-assisted-contributions-in-the-ros-project/55903",
       "verified": "2026-11-23",
-      "sha256": null
+      "sha256": "text:aed29ec8c5ec06e5a1f83d35e1f84fc5947b45207baf79f8e047b19f1dff3d7d"
     },
     "ros2-developer-guide": {
       "title": "ROS 2 developer guide",
       "url": "https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Developer-Guide.html",
       "verified": "2026-11-23",
-      "sha256": null
+      "sha256": "text:2c43ebb0448c9d6b559d6f5c28a701a44d8425b53f204d11700c16a53b4cb55d"
     },
     "ros2-making-a-pr": {
       "title": "Making a pull request",
       "url": "https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Making-a-PR.html",
       "verified": "2026-11-23",
-      "sha256": null
+      "sha256": "text:e86dc13f3d9e8ae6a08db9a27554f5bb395ca6f592f21ab78c383a17ff3b5642"
     },
     "ros2-org-templates": {
       "title": "ros2 organization PR and issue templates",
       "url": "https://github.com/ros2/.github",
       "verified": "2026-11-23",
-      "sha256": null
+      "sha256": "tree:4d388d53b5f6e2712a97effa80a03ec10f63d991"
     }
   }
 }

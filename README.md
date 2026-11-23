@@ -17,10 +17,11 @@ The full design, including the roadmap, is in [design/ros2-agent-kit-design.md](
 | --- | --- |
 | Policy | Profiles in `policy/`, selected by the git remote: `osra-ros2` for `github.com/ros2/*`, `generic-dco` for other DCO projects, `app` for your own code |
 | Gate engine | `ros2-gate`: the checks behind every hook, git hook, and CI job |
-| Skills | Contribution: `contribute-preflight`, `commit`, `pr-prepare`, `issue-report`, `review-respond`, `backport`, `api-abi-stability`; code rules: `cpp-style`, `python-style`, `cmake-style`, `docs-style`, `lint-and-test`; application development: `workspace-and-packages`, `nodes-and-components`, `executors-and-qos`, `launch-and-interfaces`, `testing`, `introspection`; maintainer: `ci-trigger` |
+| Skills | Contribution: `contribute-preflight`, `commit`, `pr-prepare`, `issue-report`, `review-respond`, `backport`, `api-abi-stability`; code rules: `cpp-style`, `python-style`, `cmake-style`, `docs-style`, `lint-and-test`; application development: `workspace-and-packages`, `nodes-and-components`, `executors-and-qos`, `launch-and-interfaces`, `testing`, `introspection`; maintainer: `ci-trigger`, `ci-status`, `buildfarm-triage`, `maintainer-triage`, `rosdistro-release`, `contribution-report` |
 | Hooks | Claude Code and Codex through `hooks/hooks.json`; Gemini CLI through the generated `gemini` branch |
 | Tier C | `ci/action.yml` for GitHub Actions and `.pre-commit-hooks.yaml` for pre-commit, so the rules hold for contributors on any tool |
-| Tools | `tools/detect_packages.py` maps PR diffs to ROS packages; `tools/fetch_templates.py` caches an organization's templates |
+| Subagents | `contribution-auditor` audits a branch before the PR packet; `style-reviewer` reviews a diff against the style skills; both read-only |
+| Tools | `tools/detect_packages.py` maps PR diffs to ROS packages; `tools/fetch_templates.py` caches an organization's templates; `tools/watch_sources.py` detects changes in the upstream policy documents |
 
 ## What the gates do
 
@@ -148,6 +149,12 @@ They cost model calls, so they run before a release, not in CI; see [evals/READM
 `.github/workflows/distro-matrix.yml` runs the gate and tool tests and `evals/app_smoke.sh` inside the `ros:<distro>-ros-base` image of every active distribution listed in `policy/distributions.json`, on every change and weekly.
 The smoke check creates packages the way the `workspace-and-packages` skill says, builds them, and runs `colcon test` with the linters, so a skill instruction that stops holding on a distribution fails the build.
 Distributions whose image is not yet verified run as experimental and do not fail the workflow.
+
+## Keeping pace with upstream
+
+`policy/sources.json` lists every upstream document a rule depends on, with a content hash and a last-verified date.
+A weekly workflow re-fetches them and opens an issue when one changed, so a policy change is reflected within 14 days.
+After re-verifying, `python3 tools/watch_sources.py --update` stores the new hashes.
 
 ## Development
 

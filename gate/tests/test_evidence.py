@@ -141,6 +141,8 @@ class Lint(unittest.TestCase):
         doc.write_text('# Title\n\nOne sentence. Two sentences here.\n\n```\ncode. Not checked.\n```\n')
         report = lint.lint_file(str(doc), repo)
         self.assertTrue(any('one sentence per line' in f.message for f in report.findings))
+        doc.write_text('## 1. Gather the facts\n\n1. One item.\n2. Another item.\n')
+        self.assertEqual(lint.lint_file(str(doc), repo).findings, [])
         self.assertIsNone(lint.kind_of('x.unknown'))
         self.assertEqual(lint.kind_of('CMakeLists.txt'), 'cmake')
 
