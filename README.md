@@ -17,7 +17,7 @@ The full design, including the roadmap, is in [design/ros2-agent-kit-design.md](
 | --- | --- |
 | Policy | Profiles in `policy/`, selected by the git remote: `osra-ros2` for `github.com/ros2/*`, `generic-dco` for other DCO projects, `app` for your own code |
 | Gate engine | `ros2-gate`: the checks behind every hook, git hook, and CI job |
-| Skills | `contribute-preflight`, `commit`, `pr-prepare`, `issue-report`, `ci-trigger` |
+| Skills | Contribution: `contribute-preflight`, `commit`, `pr-prepare`, `issue-report`, `review-respond`, `backport`, `api-abi-stability`; code rules: `cpp-style`, `python-style`, `cmake-style`, `docs-style`, `lint-and-test`; maintainer: `ci-trigger` |
 | Hooks | Claude Code and Codex through `hooks/hooks.json`; Gemini CLI through the generated `gemini` branch |
 | Tier C | `ci/action.yml` for GitHub Actions and `.pre-commit-hooks.yaml` for pre-commit, so the rules hold for contributors on any tool |
 | Tools | `tools/detect_packages.py` maps PR diffs to ROS packages; `tools/fetch_templates.py` caches an organization's templates |
@@ -27,9 +27,24 @@ The full design, including the roadmap, is in [design/ros2-agent-kit-design.md](
 | Gate | When | Check | Result |
 | --- | --- | --- | --- |
 | G1 | The agent runs `git commit` | The author is the human contributor, not an agent identity; the DCO sign-off is present; hooks are not bypassed | Block |
+| G2 | The agent runs `git push` | Every commit since the merge base passes G1, and the evidence ledger holds a successful build and test for the current tree | Block |
 | G3 | The agent runs `gh pr create`, `gh issue create`, any `gh` comment, review, edit, or merge command, or a mutating `gh api` call | Not allowed under a profile where the human submits | Block, with instructions for the human |
 | G4 | The agent writes `PR_BODY.md` or `ISSUE_BODY.md` | Every template section is present, the generative-AI disclosure is filled in, no placeholder is left; sections the human writes may stay empty in a draft | Block |
 | G5 | Session start | The active profile and ROS distribution are printed | Inform |
+| G6 | The agent edits a C++, Python, CMake, XML, or documentation file | The ament linter for that file type when installed, otherwise 100 columns, tabs, one sentence per line | Advise |
+| G7 | The agent ends its turn | A claim such as "all tests pass" without a matching successful entry in the evidence ledger | Advise |
+
+## Evidence ledger
+
+An agent may only report a build, lint, or test result that it ran on the current tree.
+`ros2-gate run -- <command>` runs the command and records it with the exit code, the commit, and a hash of the working tree in `.ros2-agent-kit/evidence.jsonl`, which the kit excludes from git.
+`ros2-gate evidence` prints the entries that match the current tree; the PR packet quotes them and G2 requires them.
+
+```bash
+python3 gate/ros2-gate run -- colcon build --packages-select rclcpp
+python3 gate/ros2-gate run -- colcon test --packages-select rclcpp
+python3 gate/ros2-gate evidence
+```
 
 `ROS2_GATE_PROFILE=osra-ros2` forces a profile.
 
@@ -98,6 +113,8 @@ python3 gate/ros2-gate check-range                  # every commit since the mer
 python3 gate/ros2-gate check-pr-body PR_BODY.md --issue 1234
 python3 gate/ros2-gate check-issue-body ISSUE_BODY.md --template bug_report
 python3 gate/ros2-gate guard -- gh pr create        # allow or block, with the reason
+python3 gate/ros2-gate lint-file src/node.cpp       # fast advisory style check
+echo "all tests pass" | python3 gate/ros2-gate check-claims   # claims without evidence
 ```
 
 Exit codes: 0 pass, 1 fail, 2 usage or runtime error.
@@ -120,6 +137,11 @@ The detector also works on its own:
 ros-ci-for-pr --packages $(python3 tools/detect_packages.py ros2/demos#806)
 python3 tools/detect_packages.py --local     # packages touched by the current branch, no network
 ```
+
+## Skill evaluations
+
+`evals/` holds `claude plugin eval` cases: one prompt per skill that must trigger it, and an unrelated prompt that must not.
+They cost model calls, so they run before a release, not in CI; see [evals/README.md](evals/README.md).
 
 ## Development
 

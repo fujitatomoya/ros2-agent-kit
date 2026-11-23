@@ -1,5 +1,5 @@
 {
-  "description": "ros2-agent-kit gates: G5 profile at session start, G1 and G3 on git/gh commands, G4 on PR and issue body files. Event names are shared by Claude Code and Codex.",
+  "description": "ros2-agent-kit gates: G5 profile at session start, G1, G2 and G3 on git/gh commands, G4 on PR and issue body files, G6 on edited source files, G7 on stop. Event names are shared by Claude Code and Codex.",
   "hooks": {
     "SessionStart": [
       {
@@ -27,6 +27,17 @@
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/adapters/claude_codex_hook.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
         "hooks": [
           {
             "type": "command",

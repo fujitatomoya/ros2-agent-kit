@@ -1,6 +1,6 @@
 {
   "name": "ros2",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ROS 2 development and contribution-compliance kit: policy-aware gates for DCO sign-off, AI disclosure, and human-only PR and issue submission, plus ROS 2 skills.",
   "author": {
     "name": "Tomoya Fujita",
@@ -9,6 +9,13 @@
   "homepage": "https://github.com/fujitatomoya/ros2-agent-kit",
   "repository": "https://github.com/fujitatomoya/ros2-agent-kit",
   "license": "Apache-2.0",
-  "keywords": ["ros2", "ros", "robotics", "dco", "contribution", "compliance"],
+  "keywords": [
+    "ros2",
+    "ros",
+    "robotics",
+    "dco",
+    "contribution",
+    "compliance"
+  ],
   "skills": "./skills/"
 }

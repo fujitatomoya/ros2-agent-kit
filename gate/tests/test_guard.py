@@ -112,7 +112,7 @@ class GitCommit(unittest.TestCase):
         self.assertFalse(guard.guard('git commit -s -m x', OSRA, IDS, cwd=agent_repo).allowed)
 
     def test_other_git_commands_allowed(self):
-        for cmd in ('git status', 'git push origin HEAD', 'git log --oneline', 'git add -A',
+        for cmd in ('git status', 'git push --dry-run', 'git log --oneline', 'git add -A',
                     'git -C /tmp status', 'git rebase -i HEAD~2'):
             self.assertTrue(self.check(cmd).allowed, cmd)
 

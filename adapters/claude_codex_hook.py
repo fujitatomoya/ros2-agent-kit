@@ -22,7 +22,9 @@ Context: plain text on stdout for SessionStart.
 Events handled:
   SessionStart          -> G5, print the active profile in one line
   PreToolUse  (Bash)    -> G1 and G3, guard the command
-  PostToolUse (Write|Edit) -> G4, check PR_BODY.md / ISSUE_BODY.md after they are written
+  PostToolUse (Write|Edit) -> G4, check PR_BODY.md / ISSUE_BODY.md after they are written;
+                              G6, advisory style check on edited source files
+  Stop                  -> G7, verification claims without evidence (advisory)
 """
 
 from __future__ import annotations
@@ -35,7 +37,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), 'gate'))
 
-from ros2_gate import body, guard, profile as profile_mod  # noqa: E402
+from ros2_gate import body, claims, guard, lint, profile as profile_mod  # noqa: E402
 from ros2_gate.cli import github_org, repo_root  # noqa: E402
 
 PR_BODY_RE = re.compile(r'^(?:pr|pull[-_]?request)[-_]?body\.md$', re.I)
@@ -117,10 +119,33 @@ def on_post_tool_use(payload: dict, prof, cwd) -> int:
         return ALLOW
     path = (payload.get('tool_input') or {}).get('file_path') or ''
     text = check_body_file(path, prof, cwd)
-    if not text:
+    if text:
+        print(text, file=sys.stderr)
+        return BLOCK
+    if lint.kind_of(path):
+        report = lint.lint_file(path, cwd)
+        warnings = [f for f in report.findings if f.level == 'warning']
+        if warnings:
+            print(json.dumps({'hookSpecificOutput': {
+                'hookEventName': 'PostToolUse',
+                'additionalContext': 'ros2-gate G6 (advisory) on ' + path + ':\n'
+                                     + '\n'.join(f.message + (f' (fix: {f.fix})' if f.fix else '')
+                                                  for f in warnings)}}))
+    return ALLOW
+
+
+def on_stop(payload: dict, cwd) -> int:
+    if payload.get('stop_hook_active'):
         return ALLOW
-    print(text, file=sys.stderr)
-    return BLOCK
+    message = payload.get('last_assistant_message') or ''
+    report = claims.check_claims(message, cwd)
+    warnings = [f for f in report.findings if f.level == 'warning']
+    if warnings:
+        print(json.dumps({'hookSpecificOutput': {
+            'hookEventName': 'Stop',
+            'additionalContext': 'ros2-gate G7: ' + ' '.join(f.message + '.' for f in warnings)
+                                 + ' Only report results you ran on the current tree.'}}))
+    return ALLOW
 
 
 def main() -> int:
@@ -140,6 +165,8 @@ def main() -> int:
             return on_pre_tool_use(payload, prof, identities, cwd)
         if event == 'PostToolUse':
             return on_post_tool_use(payload, prof, cwd)
+        if event == 'Stop':
+            return on_stop(payload, cwd)
     except Exception as exc:
         print(f'ros2-gate: internal error, allowing: {exc}', file=sys.stderr)
     return ALLOW

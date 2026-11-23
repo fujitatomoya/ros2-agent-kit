@@ -24,7 +24,8 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from . import __version__, body, commit, doctor as doctor_mod, gitinfo, guard, profile as profile_mod
+from . import (__version__, body, claims as claims_mod, commit, doctor as doctor_mod, evidence,
+               gitinfo, guard, lint, profile as profile_mod)
 from .findings import Report
 
 PASS, FAIL, USAGE = 0, 1, 2
@@ -136,6 +137,46 @@ def cmd_check_issue_body(args, prof, cwd) -> int:
     return _emit(report, args.json)
 
 
+def cmd_run(args, cwd) -> int:
+    words = list(args.command)
+    if words and words[0] == '--':
+        words = words[1:]
+    if not words:
+        print('run: no command given', file=sys.stderr)
+        return USAGE
+    code = evidence.run_and_record(words, cwd)
+    print(f'ros2-gate: recorded "{" ".join(words)}" with exit code {code}', file=sys.stderr)
+    return code
+
+
+def cmd_evidence(args, cwd) -> int:
+    current = evidence.tree_hash(cwd)
+    entries = evidence.read_entries(cwd) if args.all else evidence.matching_entries(cwd, current)
+    if args.json:
+        print(json.dumps({'tree': current, 'entries': entries}, indent=2))
+        return PASS
+    if not entries:
+        print('no evidence for the current tree' if not args.all else 'the ledger is empty')
+        return PASS
+    for e in entries:
+        print(evidence.format_entry(e, current=e.get('tree') == current))
+    return PASS
+
+
+def cmd_check_claims(args, cwd) -> int:
+    text = _read(args.file) if args.file else sys.stdin.read()
+    return _emit(claims_mod.check_claims(text, cwd), args.json)
+
+
+def cmd_lint_file(args, cwd) -> int:
+    report = Report()
+    for path in args.files:
+        report.extend(lint.lint_file(path, cwd))
+    if not report.findings:
+        report.info(lint.GATE, 'no findings')
+    return _emit(report, args.json)
+
+
 def cmd_doctor(args, prof, cwd, identities) -> int:
     return _emit(doctor_mod.doctor(prof, identities, github_org(prof, cwd), cwd), args.json)
 
@@ -194,6 +235,18 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument('--draft', action='store_true',
                     help='sections the human writes may still be empty (warnings, not errors)')
 
+    sp = sub.add_parser('run', help='run a build, lint, or test command and record it as evidence')
+    sp.add_argument('command', nargs=argparse.REMAINDER, help='the command, after --')
+
+    sp = sub.add_parser('evidence', help='print the evidence recorded for the current tree')
+    sp.add_argument('--all', action='store_true', help='print every entry, stale ones marked')
+
+    sp = sub.add_parser('check-claims', help='find verification claims without evidence (G7)')
+    sp.add_argument('file', nargs='?', help='text file to scan (default: stdin)')
+
+    sp = sub.add_parser('lint-file', help='fast style check on edited files (G6, advisory)')
+    sp.add_argument('files', nargs='+')
+
     sub.add_parser('doctor', help='report the prerequisites of the kit in this environment')
 
     sp = sub.add_parser('install-hooks', help='install tier C git hooks (commit-msg, pre-push)')
@@ -222,6 +275,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             return cmd_check_issue_body(args, prof, cwd)
         if args.cmd == 'guard':
             return cmd_guard(args, prof, cwd, identities)
+        if args.cmd == 'run':
+            return cmd_run(args, cwd)
+        if args.cmd == 'evidence':
+            return cmd_evidence(args, cwd)
+        if args.cmd == 'check-claims':
+            return cmd_check_claims(args, cwd)
+        if args.cmd == 'lint-file':
+            return cmd_lint_file(args, cwd)
         if args.cmd == 'doctor':
             return cmd_doctor(args, prof, cwd, identities)
         if args.cmd == 'install-hooks':

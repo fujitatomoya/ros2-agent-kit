@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from . import commit as commit_checks
-from . import gitinfo
+from . import evidence, gitinfo
 from .identities import AgentIdentities
 from .profile import Profile
 
@@ -220,6 +220,8 @@ def _message_has_signoff(info: dict, cwd: Optional[str]) -> Optional[bool]:
 def _guard_git(tokens: List[str], profile: Profile, identities: AgentIdentities,
                cwd: Optional[str]) -> Decision:
     sub, args, overrides = _git_subcommand(tokens)
+    if sub == 'push':
+        return _guard_git_push(args, profile, identities, cwd)
     if sub != 'commit':
         return Decision(ALLOW)
     info = _parse_git_commit_args(args)
@@ -261,6 +263,35 @@ def _guard_git(tokens: List[str], profile: Profile, identities: AgentIdentities,
         if not info['signoff'] and known is not True:
             return Decision(BLOCK, 'G1', 'DCO sign-off is required; add -s (--signoff) to '
                                          'git commit so the Signed-off-by trailer matches the author')
+    return Decision(ALLOW)
+
+
+def _guard_git_push(args: List[str], profile: Profile, identities: AgentIdentities,
+                    cwd: Optional[str]) -> Decision:
+    """G2: every commit since the merge base passes, and evidence exists for the current tree."""
+    if any(a in ('--dry-run', '-n', '--delete', '-d', '--tags') for a in args):
+        return Decision(ALLOW)
+    if not gitinfo.is_repository(cwd):
+        return Decision(ALLOW)
+    base = commit_checks.default_base(profile, cwd)
+    if base is not None:
+        report = commit_checks.check_range(profile, identities, base=base, cwd=cwd)
+        if not report.ok:
+            first = next(f for f in report.findings if f.level == 'error')
+            return Decision(BLOCK, 'G2', f'a commit on this branch fails G1: {first.message}'
+                                         + (f' (fix: {first.fix})' if first.fix else ''))
+    required = [k for k in ('build', 'test')
+                if profile.rule(f'verification.{"tests" if k == "test" else k}') == 'required']
+    if not required:
+        return Decision(ALLOW)
+    have = evidence.successful_kinds(cwd)
+    missing = [k for k in required if k not in have]
+    if missing:
+        hint = {'build': 'ros2-gate run -- colcon build --packages-select <pkg>',
+                'test': 'ros2-gate run -- colcon test --packages-select <pkg>'}
+        return Decision(BLOCK, 'G2', 'no successful ' + ' and '.join(missing) + ' evidence for the '
+                                     'current tree; run ' + '; '.join(hint[k] for k in missing)
+                                     + ' and then push')
     return Decision(ALLOW)
 
 

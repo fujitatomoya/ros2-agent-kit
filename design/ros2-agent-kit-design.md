@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Draft v0.8, M1 implemented |
+| Status | Draft v0.9, M2 implemented |
 | Date | 2026-11-23 |
 | Owner | Tomoya Fujita |
 | Repository | <https://github.com/fujitatomoya/ros2-agent-kit> |
@@ -175,6 +175,8 @@ Helpers that need the GitHub API, such as package detection, live in `tools/` an
 | `check-issue-body` | Validate an issue body file against the chosen issue template |
 | `run -- <cmd>` | Run a build, lint, or test command and record the result in the evidence ledger |
 | `evidence` | Print the evidence that matches the current tree |
+| `check-claims` | Find verification claims in a message that have no matching evidence (G7) |
+| `lint-file` | Fast, advisory style check on edited files (G6) |
 | `guard` | Decide whether a shell command is allowed under the active profile |
 | `doctor` | Report the prerequisites of the kit in this environment: identity, profile, templates, tools, token |
 | `install-hooks` | Write `commit-msg` and `pre-push` git hooks that call the gate, for contributors without pre-commit |
@@ -182,7 +184,7 @@ Helpers that need the GitHub API, such as package detection, live in `tools/` an
 Hooks, git hooks, and CI all call these same subcommands.
 A rule therefore has one implementation and one set of unit tests.
 Exit codes are uniform: 0 for pass or allow, 1 for fail or block, 2 for a usage or runtime error.
-`run` and `evidence` arrive with the evidence ledger in M2; the other subcommands exist since M0.
+All subcommands exist since M2.
 
 ### 6.3 Policy as data
 
@@ -236,9 +238,12 @@ The proposed upstream `AGENTS.md` says an agent must never claim verification th
 The ledger makes that checkable.
 
 `ros2-gate run -- colcon test --packages-select rclcpp` records the command, exit code, timestamp, `HEAD`, and a hash of the working tree.
-The ledger is a git-ignored file in the workspace.
+The ledger is `.ros2-agent-kit/evidence.jsonl` at the repository root, which the gate adds to `.git/info/exclude`.
+The tree hash covers `HEAD`, the diff of tracked files, and the contents of untracked files other than `build/`, `install/`, `log/`, and the ledger directory, so a build does not invalidate its own evidence.
 `ros2-gate evidence` prints only entries whose tree hash matches the current tree.
+Each entry is classified as build, test, or lint evidence from its command line; a `colcon test` run also counts as lint evidence because `ament_lint_auto` runs inside it.
 The PR packet lists those entries as facts, and the agent may not state any other verification.
+G7 enforces the last point on the agent's final message: a sentence such as "all tests pass" without a successful test entry for the current tree produces an advisory.
 
 ### 6.5 Templates are read, not vendored
 
@@ -325,8 +330,11 @@ This means reading `$ROS_DISTRO`, installed headers, and `ros2` command output.
 | G3 | `gh pr create`, `gh issue create`, any `gh` comment, review, edit, close, or merge command, and any mutating `gh api` call | Agent posting is not allowed under the profile | Block, with instructions for the human |
 | G4 | `PR_BODY.md` or `ISSUE_BODY.md` written | Template sections present; description and disclosure filled; no placeholder left; `Fixes #` present when an issue exists | Block |
 | G5 | Session start | Print the active profile and distribution in a few lines | Inform |
-| G6 | Source file edited | Fast formatter check on the changed file | Advise |
-| G7 | End of turn | List any verification claims without matching evidence | Advise |
+| G6 | Source file edited | The ament linter for the file type when installed, else 100 columns, tabs, one sentence per line | Advise |
+| G7 | End of turn | Verification claims in the final message without matching evidence | Advise |
+
+G2 skips the range check when no base branch can be determined and allows `--dry-run` and branch deletions.
+G6 and G7 return `additionalContext` to the agent and never block; G7 stays quiet when the harness reports that a stop hook is already active, to avoid loops.
 
 Gates match only `git` and `gh` commands and the kit's own files.
 They must stay fast and narrow so that they coexist with other plugins' hooks, for example ECC's GateGuard.
@@ -720,6 +728,9 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | 2026-11-23 | `.pre-commit-hooks.yaml` lives at the repository root, because pre-commit only looks there. |
 | 2026-11-23 | The G4 hook checks packets in draft mode; only the final `check-pr-body` requires the human-written sections. |
 | 2026-11-23 | Codex uses the same `hooks/hooks.json` as Claude Code, confirmed against the Codex hooks documentation: same event names, `Bash` matcher, `tool_input.command`, exit code 2 to block, and `CLAUDE_PLUGIN_ROOT` set for compatibility. |
+| 2026-11-23 | The tree hash behind the evidence ledger ignores `build/`, `install/`, `log/`, and the ledger directory, because colcon output is rarely git-ignored in ROS repositories and must not invalidate evidence. |
+| 2026-11-23 | Skill evaluations use `claude plugin eval` cases under `evals/` rather than a custom runner. |
+| 2026-11-23 | Active distributions live in `policy/distributions.json`, shared by the `backport` skill and the CI matrix, with a verified date. |
 
 ### 16.2 Open
 

@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .ros2-agent-kit/
 .pytest_cache/
+evals/results/

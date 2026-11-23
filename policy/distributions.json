@@ -1,0 +1,11 @@
+{
+  "_comment": "Active ROS 2 distributions per REP-2000, used by the backport skill and the CI distribution matrix. Verify against https://docs.ros.org/en/rolling/Releases.html when a distribution is released or reaches end of life. image_verified says whether the ros:<name> Docker image has been confirmed to exist for the CI matrix.",
+  "verified": "2026-11-23",
+  "distributions": [
+    {"name": "humble", "released": "2022-05-23", "eol": "2027-05-31", "lts": true, "ubuntu": "22.04", "python": "3.10", "image_verified": true},
+    {"name": "jazzy", "released": "2024-05-23", "eol": "2029-05-31", "lts": true, "ubuntu": "24.04", "python": "3.12", "image_verified": true},
+    {"name": "kilted", "released": "2025-05-23", "eol": "2026-11-30", "lts": false, "ubuntu": "24.04", "python": "3.12", "image_verified": true},
+    {"name": "lyrical", "released": "2026-05-23", "eol": "2031-05-31", "lts": true, "ubuntu": "26.04", "python": "3.14", "image_verified": false},
+    {"name": "rolling", "released": null, "eol": null, "lts": false, "ubuntu": "26.04", "python": "3.14", "image_verified": true}
+  ]
+}

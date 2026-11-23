@@ -10,7 +10,7 @@
       "name": "ros2",
       "source": "./",
       "description": "ROS 2 development and contribution-compliance kit.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "development",
       "keywords": [
         "ros2",
