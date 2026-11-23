@@ -1,0 +1,2 @@
+description = "ros2-agent-kit: report the prerequisites of the kit in this environment"
+prompt = """Run `python3 "${extensionPath}/gate/ros2-gate" doctor` (the ros2 extension directory) and explain each finding to the user, with the fix for anything missing. {{args}}"""

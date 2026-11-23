@@ -1,0 +1,17 @@
+{
+  "name": "ros2-agent-kit",
+  "interface": {
+    "displayName": "ros2-agent-kit"
+  },
+  "plugins": [
+    {
+      "name": "ros2",
+      "source": "./",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

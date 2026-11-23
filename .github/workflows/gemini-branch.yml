@@ -1,0 +1,33 @@
+name: gemini-branch
+
+# Builds the Gemini CLI extension tree from the canonical sources (design section 9.3).
+# On pull requests it only checks that the generator works; on pushes to main it
+# publishes the result to the `gemini` branch.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: assemble
+        run: |
+          tools/build_gemini_branch.sh dist/gemini
+          python3 -c "import json; json.load(open('dist/gemini/gemini-extension.json')); json.load(open('dist/gemini/hooks/hooks.json'))"
+          test -f dist/gemini/skills/commit/SKILL.md
+          test -f dist/gemini/adapters/gemini_hook.py
+      - name: publish to the gemini branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd dist/gemini
+          git init -q -b gemini
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Generate Gemini extension from ${GITHUB_SHA}"
+          git push --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:gemini

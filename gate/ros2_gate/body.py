@@ -113,7 +113,8 @@ def find_pr_template(repo_root: Optional[Path], org: Optional[str] = None) -> Op
 
 
 def check_pr_body(body: str, template: Optional[str], profile: Profile,
-                  issue: Optional[int] = None) -> Report:
+                  issue: Optional[int] = None, final: bool = True) -> Report:
+    """``final=False`` checks a draft packet: sections owned by the human may still be empty."""
     report = Report()
     disclosure = profile.rule('ai_disclosure.pull_request', 'optional')
     if not body.strip():
@@ -133,10 +134,14 @@ def check_pr_body(body: str, template: Optional[str], profile: Profile,
             required = idx == 0 or (disclosure == 'required' and _GENAI_RE.search(ts.heading))
             content = _FIXES_PLACEHOLDER_RE.sub('', bs.content).strip()
             if required and (bs.is_empty or not content):
-                what = 'the AI disclosure' if _GENAI_RE.search(ts.heading) else 'the description'
-                who = ('state the tool and model, or "No"' if _GENAI_RE.search(ts.heading)
-                       else 'the human contributor writes it')
-                report.error(GATE, f'section "{ts.heading}" is empty; {what} is required ({who})')
+                genai = bool(_GENAI_RE.search(ts.heading))
+                what = 'the AI disclosure' if genai else 'the description'
+                who = 'state the tool and model, or "No"' if genai else 'the human contributor writes it'
+                msg = f'section "{ts.heading}" is empty; {what} is required ({who})'
+                if genai or final:
+                    report.error(GATE, msg)
+                else:
+                    report.warning(GATE, msg + '; left for the human in this draft')
             if bs.content and _PLACEHOLDER_TOKEN_RE.search(bs.content):
                 report.error(GATE, f'section "{ts.heading}" still contains a template placeholder')
     else:
@@ -252,7 +257,9 @@ def find_issue_template(repo_root: Optional[Path], name: str,
     return None
 
 
-def check_issue_body(body: str, form: List[FormField], profile: Profile) -> Report:
+def check_issue_body(body: str, form: List[FormField], profile: Profile,
+                     final: bool = True) -> Report:
+    """``final=False`` checks a draft: required fields the human writes may still be empty."""
     report = Report()
     disclosure = profile.rule('ai_disclosure.issue', 'optional')
     if not body.strip():
@@ -273,7 +280,10 @@ def check_issue_body(body: str, form: List[FormField], profile: Profile) -> Repo
                              fix=f'add a "### {f.label}" heading with the content')
             continue
         if required and sec.is_empty:
-            report.error(GATE, f'field "{f.label}" is empty')
+            if genai or final:
+                report.error(GATE, f'field "{f.label}" is empty')
+            else:
+                report.warning(GATE, f'field "{f.label}" is empty; left for the human in this draft')
             continue
         for token in f.placeholders:
             if token in sec.content:

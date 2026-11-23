@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from . import __version__, body, commit, gitinfo, guard, profile as profile_mod
+from . import __version__, body, commit, doctor as doctor_mod, gitinfo, guard, profile as profile_mod
 from .findings import Report
 
 PASS, FAIL, USAGE = 0, 1, 2
@@ -109,7 +109,7 @@ def cmd_check_pr_body(args, prof, cwd) -> int:
         found = body.find_pr_template(repo_root(cwd), github_org(prof, cwd))
         if found:
             template_text = found.read_text(encoding='utf-8', errors='replace')
-    report = body.check_pr_body(text, template_text, prof, issue=args.issue)
+    report = body.check_pr_body(text, template_text, prof, issue=args.issue, final=not args.draft)
     return _emit(report, args.json)
 
 
@@ -131,8 +131,17 @@ def cmd_check_issue_body(args, prof, cwd) -> int:
     if path.suffix == '.md':
         report = body.check_issue_body_markdown(text, template_text, prof)
     else:
-        report = body.check_issue_body(text, body.parse_issue_form(template_text), prof)
+        report = body.check_issue_body(text, body.parse_issue_form(template_text), prof,
+                                       final=not args.draft)
     return _emit(report, args.json)
+
+
+def cmd_doctor(args, prof, cwd, identities) -> int:
+    return _emit(doctor_mod.doctor(prof, identities, github_org(prof, cwd), cwd), args.json)
+
+
+def cmd_install_hooks(args, cwd) -> int:
+    return _emit(doctor_mod.install_hooks(cwd, force=args.force), args.json)
 
 
 def cmd_guard(args, prof, cwd, identities) -> int:
@@ -176,10 +185,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument('file')
     sp.add_argument('--template', help='template file (default: discovered)')
     sp.add_argument('--issue', type=int, help='issue number the PR must reference')
+    sp.add_argument('--draft', action='store_true',
+                    help='sections the human writes may still be empty (warnings, not errors)')
 
     sp = sub.add_parser('check-issue-body', help='validate an issue body file against a form (G4)')
     sp.add_argument('file')
     sp.add_argument('--template', help='issue template name (bug_report) or path')
+    sp.add_argument('--draft', action='store_true',
+                    help='sections the human writes may still be empty (warnings, not errors)')
+
+    sub.add_parser('doctor', help='report the prerequisites of the kit in this environment')
+
+    sp = sub.add_parser('install-hooks', help='install tier C git hooks (commit-msg, pre-push)')
+    sp.add_argument('--force', action='store_true', help='replace existing foreign hooks')
 
     sp = sub.add_parser('guard', help='decide whether a shell command is allowed (G1, G3)')
     sp.add_argument('command', nargs=argparse.REMAINDER, help='the command, after --')
@@ -204,6 +222,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             return cmd_check_issue_body(args, prof, cwd)
         if args.cmd == 'guard':
             return cmd_guard(args, prof, cwd, identities)
+        if args.cmd == 'doctor':
+            return cmd_doctor(args, prof, cwd, identities)
+        if args.cmd == 'install-hooks':
+            return cmd_install_hooks(args, cwd)
     except (gitinfo.GitError, OSError, KeyError, ValueError) as exc:
         print(f'ros2-gate: {exc}', file=sys.stderr)
         return USAGE

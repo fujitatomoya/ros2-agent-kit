@@ -79,41 +79,47 @@ def on_pre_tool_use(payload: dict, prof, identities, cwd) -> int:
     return BLOCK
 
 
-def on_post_tool_use(payload: dict, prof, cwd) -> int:
-    if payload.get('tool_name') not in ('Write', 'Edit', 'MultiEdit'):
-        return ALLOW
-    path = (payload.get('tool_input') or {}).get('file_path') or ''
+def check_body_file(path: str, prof, cwd) -> str:
+    """Run G4 on a PR_BODY.md or ISSUE_BODY.md draft. Returns the problem text, or '' when fine."""
     name = os.path.basename(path)
     if not (PR_BODY_RE.match(name) or ISSUE_BODY_RE.match(name)):
-        return ALLOW
+        return ''
     try:
         with open(path, encoding='utf-8', errors='replace') as fh:
             text = fh.read()
     except OSError:
-        return ALLOW
+        return ''
     root = repo_root(cwd)
     org = github_org(prof, cwd)
     if PR_BODY_RE.match(name):
         found = body.find_pr_template(root, org)
         template = found.read_text(encoding='utf-8', errors='replace') if found else None
-        report = body.check_pr_body(text, template, prof)
+        report = body.check_pr_body(text, template, prof, final=False)
     else:
         m = TEMPLATE_HINT_RE.search(text)
         tname = m.group(1) if m else 'bug_report'
         found = body.find_issue_template(root, tname, org)
         if found is None:
-            print(f'ros2-gate G4: issue template "{tname}" not found; run '
-                  f'tools/fetch_templates.py {org or "<org>"} to cache the organization default',
-                  file=sys.stderr)
-            return BLOCK
+            return (f'ros2-gate G4: issue template "{tname}" not found; run '
+                    f'tools/fetch_templates.py {org or "<org>"} to cache the organization default')
         ttext = found.read_text(encoding='utf-8', errors='replace')
         if found.suffix == '.md':
             report = body.check_issue_body_markdown(text, ttext, prof)
         else:
-            report = body.check_issue_body(text, body.parse_issue_form(ttext), prof)
+            report = body.check_issue_body(text, body.parse_issue_form(ttext), prof, final=False)
     if report.ok:
+        return ''
+    return f'ros2-gate G4 found problems in {path}:\n{report.format_text()}'
+
+
+def on_post_tool_use(payload: dict, prof, cwd) -> int:
+    if payload.get('tool_name') not in ('Write', 'Edit', 'MultiEdit'):
         return ALLOW
-    print(f'ros2-gate G4 found problems in {path}:\n{report.format_text()}', file=sys.stderr)
+    path = (payload.get('tool_input') or {}).get('file_path') or ''
+    text = check_body_file(path, prof, cwd)
+    if not text:
+        return ALLOW
+    print(text, file=sys.stderr)
     return BLOCK
 
 

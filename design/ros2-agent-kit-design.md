@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Draft v0.7, M0 implemented |
+| Status | Draft v0.8, M1 implemented |
 | Date | 2026-11-23 |
 | Owner | Tomoya Fujita |
 | Repository | <https://github.com/fujitatomoya/ros2-agent-kit> |
@@ -176,6 +176,8 @@ Helpers that need the GitHub API, such as package detection, live in `tools/` an
 | `run -- <cmd>` | Run a build, lint, or test command and record the result in the evidence ledger |
 | `evidence` | Print the evidence that matches the current tree |
 | `guard` | Decide whether a shell command is allowed under the active profile |
+| `doctor` | Report the prerequisites of the kit in this environment: identity, profile, templates, tools, token |
+| `install-hooks` | Write `commit-msg` and `pre-push` git hooks that call the gate, for contributors without pre-commit |
 
 Hooks, git hooks, and CI all call these same subcommands.
 A rule therefore has one implementation and one set of unit tests.
@@ -335,8 +337,9 @@ The committed result is checked again by `check-commit` in the `commit-msg` git 
 ### 7.3 Commands
 
 Skills can be invoked directly in Claude Code and Codex, so they need no separate command files there.
-Gemini CLI gets thin TOML wrappers in `commands/`.
+Gemini CLI gets thin TOML wrappers in `gemini/commands/`, each of which tells the agent to read and apply the named skill.
 The command surface is kept small: `preflight`, `pr-prepare`, `issue-report`, `ci-trigger`, and `doctor`.
+Skills refer to the kit's files through `${CLAUDE_PLUGIN_ROOT:-.}`, which Claude Code and Codex set, with a fallback to the kit's checkout for other harnesses.
 
 ### 7.4 Subagents
 
@@ -372,6 +375,8 @@ It contains:
 
 The human writes the description and submits.
 G3 blocks the agent from submitting, and G4 checks the finished body.
+While the packet is a draft, the hook runs G4 in draft mode: the sections the human writes may still be empty and are reported as warnings, so the gate does not push the agent into writing them.
+The disclosure section is required even in a draft, and `check-pr-body` without `--draft` requires everything.
 
 ### 8.3 Issue report
 
@@ -470,15 +475,16 @@ The skill reuses the previous command from the conversation, applies the delta, 
 | Capability | Claude Code | Codex | Gemini CLI |
 | --- | --- | --- | --- |
 | Package unit | Plugin | Plugin | Extension |
-| Manifest | `.claude-plugin/plugin.json` | `.codex-plugin/plugin.json` | `gemini-extension.json` |
-| Catalog | `.claude-plugin/marketplace.json` | `.agents/plugins/marketplace.json` | Install from the git URL |
+| Manifest | `.claude-plugin/plugin.json` | `.codex-plugin/plugin.json`, the compatibility form; a root `plugin.json` is the portable form | `gemini-extension.json`, generated |
+| Catalog | `.claude-plugin/marketplace.json` | `.agents/plugins/marketplace.json`, entries carry `policy` and `category` | Install from the git URL with `--ref gemini` |
 | Skills | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` |
 | Always-on context | Session-start hook; repository `CLAUDE.md` importing `AGENTS.md` | `AGENTS.md` | `GEMINI.md` or `contextFileName` |
 | Commands | Skills, invoked directly | Skills, invoked directly | `commands/*.toml` |
 | Hook file | `hooks/hooks.json`, always merged with any manifest-declared file | `hooks/hooks.json` | `hooks/hooks.json`, fixed, no manifest override |
 | Tool hook event | `PreToolUse`, matcher `Bash` | `PreToolUse`, matcher `Bash` | `BeforeTool`, matcher `run_shell_command` |
 | Block signal | Exit code 2 with the reason on stderr, or JSON decision | Exit code 2 or JSON decision | Exit code 2 or JSON decision |
-| Hook caveats | None known | User must review and trust; re-review when a script changes | Enablement setting to be checked; the product was renamed Antigravity CLI in June 2026 |
+| Hook caveats | None known | User must review and trust; re-review when a script changes; plugins with hooks are excluded from the public directory | Enablement setting to be checked; the product was renamed Antigravity CLI in June 2026 |
+| Plugin root variable | `CLAUDE_PLUGIN_ROOT` | `PLUGIN_ROOT`, plus `CLAUDE_PLUGIN_ROOT` for compatibility | `${extensionPath}` in `hooks.json` |
 | Subagents | `agents/*.md` | To be checked | `agents/*.md`, preview |
 
 Tools without a plugin system, such as Cursor and Copilot, get tier A through `AGENTS.md` and tier C through git hooks and CI.
@@ -512,12 +518,12 @@ ros2-agent-kit/
 ├── templates/
 │   └── AGENTS.md                # draft of the org default, proposed for ros2/.github
 ├── ci/
-│   ├── action.yml               # GitHub Action for tier C
-│   └── .pre-commit-hooks.yaml
+│   └── action.yml               # composite GitHub Action for tier C
+├── .pre-commit-hooks.yaml       # pre-commit hook definitions, at the root where pre-commit looks
 ├── evals/
 ├── .github/                     # this repository's own templates and CI
 ├── .claude-plugin/              # plugin.json, marketplace.json
-├── .codex-plugin/               # plugin.json
+├── .codex-plugin/               # plugin.json, Codex compatibility manifest
 ├── .agents/plugins/             # marketplace.json for Codex
 ├── AGENTS.md                    # this repository's own rules
 ├── CLAUDE.md                    # imports AGENTS.md
@@ -643,7 +649,7 @@ The project is kept ready for donation from the first commit:
 | Hook adapters | Recorded stdin payloads per harness | Every PR |
 | Package detection | Unit tests with recorded API fixtures: nested packages, files outside any package, deleted files, fork heads, deleted forks, truncated trees | Every PR |
 | Package detection, live | One smoke test against a known multi-package PR with an expected package set | Every release |
-| Skill triggering | A list of prompts that must and must not activate each skill | Every release |
+| Skill triggering | `claude plugin eval` cases under `evals/`: a prompt per skill with a `tool_used: Skill` grader, and must-not-trigger prompts with `min: 0`, `max: 0` | Every release |
 | Skill effect | Paired runs with the skill on and off, on a small set of real tasks | Every release |
 | End to end | A scripted contribution to a throwaway fork | Every release |
 
@@ -711,6 +717,9 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | 2026-11-23 | `hooks/hooks.json` serves Claude Code and Codex; Gemini is packaged as a generated branch, because both products fix the hook file at the same path with different event names. |
 | 2026-11-23 | G1 also rejects `git commit --no-verify`, and G3 also covers `gh pr edit`, `close`, `merge`, and mutating `gh api` calls, because each is a way around the rule it protects. |
 | 2026-11-23 | Organization default templates are cached locally by `tools/fetch_templates.py`; the gate reads the cache and stays offline. |
+| 2026-11-23 | `.pre-commit-hooks.yaml` lives at the repository root, because pre-commit only looks there. |
+| 2026-11-23 | The G4 hook checks packets in draft mode; only the final `check-pr-body` requires the human-written sections. |
+| 2026-11-23 | Codex uses the same `hooks/hooks.json` as Claude Code, confirmed against the Codex hooks documentation: same event names, `Bash` matcher, `tool_input.command`, exit code 2 to block, and `CLAUDE_PLUGIN_ROOT` set for compatibility. |
 
 ### 16.2 Open
 

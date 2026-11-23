@@ -1,0 +1,23 @@
+# pre-commit hook definitions for ros2-agent-kit (tier C enforcement).
+# In a target repository's .pre-commit-config.yaml:
+#   - repo: https://github.com/fujitatomoya/ros2-agent-kit
+#     rev: main
+#     hooks:
+#       - id: ros2-gate-commit-msg
+#       - id: ros2-gate-pre-push
+- id: ros2-gate-commit-msg
+  name: ros2-gate check-commit
+  description: DCO sign-off matching the author, no agent identity, Assisted-by format.
+  entry: gate/ros2-gate check-commit --message-file
+  language: script
+  stages: [commit-msg]
+  pass_filenames: true
+  always_run: true
+- id: ros2-gate-pre-push
+  name: ros2-gate check-range
+  description: Every commit since the merge base passes check-commit.
+  entry: gate/ros2-gate check-range
+  language: script
+  stages: [pre-push]
+  pass_filenames: false
+  always_run: true

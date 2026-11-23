@@ -20,13 +20,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: unit tests
+      - name: gate unit tests
         run: cd gate && python3 -m unittest discover -s tests -t . -v
+      - name: tools unit tests
+        run: cd tools && python3 -m unittest discover -s tests -t . -v
       - name: validate json
         run: |
           python3 - <<'PY'
           import glob, json
-          files = glob.glob('policy/**/*.json', recursive=True) + glob.glob('.claude-plugin/*.json') + ['hooks/hooks.json']
+          files = (glob.glob('policy/**/*.json', recursive=True) + glob.glob('.claude-plugin/*.json')
+                   + glob.glob('.codex-plugin/*.json') + glob.glob('.agents/plugins/*.json')
+                   + ['hooks/hooks.json', 'gemini/hooks.json', 'gemini/gemini-extension.json'])
           for f in files:
               json.load(open(f))
               print('ok', f)
