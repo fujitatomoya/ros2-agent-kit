@@ -1,6 +1,6 @@
 {
   "name": "ros2",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "ROS 2 development and contribution-compliance kit: policy-aware gates for DCO sign-off, AI disclosure, and human-only PR and issue submission, plus ROS 2 skills.",
   "contextFileName": "GEMINI.md"
 }

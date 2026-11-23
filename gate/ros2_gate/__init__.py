@@ -18,4 +18,4 @@ Standard library only, no network access, no file modification unless a
 subcommand says so. Hooks, git hooks, and CI all call the same subcommands.
 """
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'

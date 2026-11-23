@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Draft v0.9, M2 implemented |
+| Status | Draft v0.10, M3 implemented |
 | Date | 2026-11-23 |
 | Owner | Tomoya Fujita |
 | Repository | <https://github.com/fujitatomoya/ros2-agent-kit> |
@@ -320,6 +320,7 @@ Their descriptions name the phrasings maintainers actually use, such as "buildfa
 
 Application skills instruct the agent to check the installed distribution before relying on memory.
 This means reading `$ROS_DISTRO`, installed headers, and `ros2` command output.
+Each application skill opens with the command that performs that check, and marks the APIs that differ across active distributions, such as the executor set, the discovery environment variables, and the deprecation of `ament_target_dependencies`.
 
 ### 7.2 Gates
 
@@ -618,6 +619,8 @@ A skill that falls behind mainline for one release cycle is removed.
 2. A scheduled CI job fetches those documents and opens an issue when one changes.
 3. The target is to reflect a policy change within 14 days.
 4. CI runs the gate tests and the application skill checks against Docker images of every active distribution in REP-2000, plus Rolling.
+   The matrix is generated from `policy/distributions.json`; the application check is `evals/app_smoke.sh`, which creates packages the way the `workspace-and-packages` skill says, builds them, and runs `colcon test` with the linters inside `ros:<distro>-ros-base`.
+   A distribution whose image is not yet verified runs as experimental and cannot fail the workflow.
 5. Releases follow ROS distribution releases, with patch releases for policy changes.
 
 One `rolling` branch is used, with distribution-specific notes inside skills.
@@ -731,6 +734,7 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | 2026-11-23 | The tree hash behind the evidence ledger ignores `build/`, `install/`, `log/`, and the ledger directory, because colcon output is rarely git-ignored in ROS repositories and must not invalidate evidence. |
 | 2026-11-23 | Skill evaluations use `claude plugin eval` cases under `evals/` rather than a custom runner. |
 | 2026-11-23 | Active distributions live in `policy/distributions.json`, shared by the `backport` skill and the CI matrix, with a verified date. |
+| 2026-11-23 | The application skill check is a package-creation smoke test per distribution, because it exercises the exact commands the skills give and needs no model call. |
 
 ### 16.2 Open
 

@@ -17,7 +17,7 @@ The full design, including the roadmap, is in [design/ros2-agent-kit-design.md](
 | --- | --- |
 | Policy | Profiles in `policy/`, selected by the git remote: `osra-ros2` for `github.com/ros2/*`, `generic-dco` for other DCO projects, `app` for your own code |
 | Gate engine | `ros2-gate`: the checks behind every hook, git hook, and CI job |
-| Skills | Contribution: `contribute-preflight`, `commit`, `pr-prepare`, `issue-report`, `review-respond`, `backport`, `api-abi-stability`; code rules: `cpp-style`, `python-style`, `cmake-style`, `docs-style`, `lint-and-test`; maintainer: `ci-trigger` |
+| Skills | Contribution: `contribute-preflight`, `commit`, `pr-prepare`, `issue-report`, `review-respond`, `backport`, `api-abi-stability`; code rules: `cpp-style`, `python-style`, `cmake-style`, `docs-style`, `lint-and-test`; application development: `workspace-and-packages`, `nodes-and-components`, `executors-and-qos`, `launch-and-interfaces`, `testing`, `introspection`; maintainer: `ci-trigger` |
 | Hooks | Claude Code and Codex through `hooks/hooks.json`; Gemini CLI through the generated `gemini` branch |
 | Tier C | `ci/action.yml` for GitHub Actions and `.pre-commit-hooks.yaml` for pre-commit, so the rules hold for contributors on any tool |
 | Tools | `tools/detect_packages.py` maps PR diffs to ROS packages; `tools/fetch_templates.py` caches an organization's templates |
@@ -142,6 +142,12 @@ python3 tools/detect_packages.py --local     # packages touched by the current b
 
 `evals/` holds `claude plugin eval` cases: one prompt per skill that must trigger it, and an unrelated prompt that must not.
 They cost model calls, so they run before a release, not in CI; see [evals/README.md](evals/README.md).
+
+## Distribution matrix
+
+`.github/workflows/distro-matrix.yml` runs the gate and tool tests and `evals/app_smoke.sh` inside the `ros:<distro>-ros-base` image of every active distribution listed in `policy/distributions.json`, on every change and weekly.
+The smoke check creates packages the way the `workspace-and-packages` skill says, builds them, and runs `colcon test` with the linters, so a skill instruction that stops holding on a distribution fails the build.
+Distributions whose image is not yet verified run as experimental and do not fail the workflow.
 
 ## Development
 

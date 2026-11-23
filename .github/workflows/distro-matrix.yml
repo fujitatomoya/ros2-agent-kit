@@ -1,0 +1,53 @@
+name: distro-matrix
+
+# Runs the gate and tool tests, and the application skill smoke check, inside
+# the Docker image of every active distribution in policy/distributions.json
+# (design sections 11.2 and 14, milestone M3). Weekly as well as on changes,
+# so a distribution update is noticed even when the kit is quiet.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          python3 - >> "$GITHUB_OUTPUT" <<'PY'
+          import json
+          data = json.load(open('policy/distributions.json'))
+          include = [{'distro': d['name'], 'experimental': not d.get('image_verified', False)}
+                     for d in data['distributions']]
+          print('matrix=' + json.dumps({'include': include}))
+          PY
+
+  check:
+    needs: matrix
+    name: ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    container:
+      image: ros:${{ matrix.distro }}-ros-base
+    steps:
+      - name: git for the gate tests
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git >/dev/null
+      - uses: actions/checkout@v4
+      - name: gate tests on the distribution's python
+        run: |
+          python3 --version
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          cd gate && python3 -m unittest discover -s tests -t .
+      - name: tools tests
+        run: cd tools && python3 -m unittest discover -s tests -t .
+      - name: application skill smoke check
+        run: evals/app_smoke.sh
