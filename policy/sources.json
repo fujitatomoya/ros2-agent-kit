@@ -1,0 +1,35 @@
+{
+  "_comment": "Every upstream document a rule depends on. The scheduled source-watch job (design section 11.2) fetches each URL, compares sha256 with the stored value, and opens an issue on change. sha256 is null until the watch job lands.",
+  "sources": {
+    "osrf-genai-policy": {
+      "title": "OSRF policy on the use of generative tools in contributions",
+      "url": "https://osralliance.org/osrf-policy-on-the-use-of-generative-tools-in-contributions/",
+      "verified": "2026-11-23",
+      "sha256": null
+    },
+    "ros-pmc-ai-guidelines": {
+      "title": "Guidelines for AI-assisted contributions in the ROS project",
+      "url": "https://discourse.openrobotics.org/t/guidelines-for-ai-assisted-contributions-in-the-ros-project/55903",
+      "verified": "2026-11-23",
+      "sha256": null
+    },
+    "ros2-developer-guide": {
+      "title": "ROS 2 developer guide",
+      "url": "https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Developer-Guide.html",
+      "verified": "2026-11-23",
+      "sha256": null
+    },
+    "ros2-making-a-pr": {
+      "title": "Making a pull request",
+      "url": "https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Making-a-PR.html",
+      "verified": "2026-11-23",
+      "sha256": null
+    },
+    "ros2-org-templates": {
+      "title": "ros2 organization PR and issue templates",
+      "url": "https://github.com/ros2/.github",
+      "verified": "2026-11-23",
+      "sha256": null
+    }
+  }
+}

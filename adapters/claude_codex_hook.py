@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+# Copyright 2026 Tomoya Fujita
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Hook adapter for Claude Code and Codex.
+
+Reads the hook payload as JSON on stdin and translates it into ros2-gate calls.
+Block signal: exit code 2 with the reason on stderr, which both harnesses honor.
+Context: plain text on stdout for SessionStart.
+
+Events handled:
+  SessionStart          -> G5, print the active profile in one line
+  PreToolUse  (Bash)    -> G1 and G3, guard the command
+  PostToolUse (Write|Edit) -> G4, check PR_BODY.md / ISSUE_BODY.md after they are written
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), 'gate'))
+
+from ros2_gate import body, guard, profile as profile_mod  # noqa: E402
+from ros2_gate.cli import github_org, repo_root  # noqa: E402
+
+PR_BODY_RE = re.compile(r'^(?:pr|pull[-_]?request)[-_]?body\.md$', re.I)
+ISSUE_BODY_RE = re.compile(r'^(?:issue|bug|feature)[-_]?(?:request[-_]?)?body\.md$', re.I)
+TEMPLATE_HINT_RE = re.compile(r'<!--\s*ros2-gate:\s*template\s*=\s*([\w.-]+)\s*-->')
+
+ALLOW, BLOCK = 0, 2
+
+
+def _read_payload() -> dict:
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+
+
+def on_session_start(payload: dict, prof) -> int:
+    line = f'ros2-agent-kit: {prof.summary()}'
+    distro = os.environ.get('ROS_DISTRO')
+    if distro:
+        line += f'; ROS_DISTRO={distro}'
+    line += ('. Contribution rules are enforced by ros2-gate hooks: commits need the human '
+             "contributor's sign-off, and the agent does not post PRs, issues, or comments "
+             'under a profile that forbids it.')
+    print(line)
+    return ALLOW
+
+
+def on_pre_tool_use(payload: dict, prof, identities, cwd) -> int:
+    if payload.get('tool_name') != 'Bash':
+        return ALLOW
+    command = (payload.get('tool_input') or {}).get('command') or ''
+    decision = guard.guard(command, prof, identities, cwd)
+    if decision.allowed:
+        return ALLOW
+    print(f'ros2-gate {decision.gate} blocked `{decision.command}`: {decision.reason}',
+          file=sys.stderr)
+    return BLOCK
+
+
+def on_post_tool_use(payload: dict, prof, cwd) -> int:
+    if payload.get('tool_name') not in ('Write', 'Edit', 'MultiEdit'):
+        return ALLOW
+    path = (payload.get('tool_input') or {}).get('file_path') or ''
+    name = os.path.basename(path)
+    if not (PR_BODY_RE.match(name) or ISSUE_BODY_RE.match(name)):
+        return ALLOW
+    try:
+        with open(path, encoding='utf-8', errors='replace') as fh:
+            text = fh.read()
+    except OSError:
+        return ALLOW
+    root = repo_root(cwd)
+    org = github_org(prof, cwd)
+    if PR_BODY_RE.match(name):
+        found = body.find_pr_template(root, org)
+        template = found.read_text(encoding='utf-8', errors='replace') if found else None
+        report = body.check_pr_body(text, template, prof)
+    else:
+        m = TEMPLATE_HINT_RE.search(text)
+        tname = m.group(1) if m else 'bug_report'
+        found = body.find_issue_template(root, tname, org)
+        if found is None:
+            print(f'ros2-gate G4: issue template "{tname}" not found; run '
+                  f'tools/fetch_templates.py {org or "<org>"} to cache the organization default',
+                  file=sys.stderr)
+            return BLOCK
+        ttext = found.read_text(encoding='utf-8', errors='replace')
+        if found.suffix == '.md':
+            report = body.check_issue_body_markdown(text, ttext, prof)
+        else:
+            report = body.check_issue_body(text, body.parse_issue_form(ttext), prof)
+    if report.ok:
+        return ALLOW
+    print(f'ros2-gate G4 found problems in {path}:\n{report.format_text()}', file=sys.stderr)
+    return BLOCK
+
+
+def main() -> int:
+    payload = _read_payload()
+    event = payload.get('hook_event_name', '')
+    cwd = payload.get('cwd') or os.environ.get('CLAUDE_PROJECT_DIR') or os.getcwd()
+    try:
+        prof = profile_mod.detect(cwd)
+        identities = profile_mod.load_identities()
+    except Exception as exc:  # never break the harness because of the gate itself
+        print(f'ros2-gate: cannot load policy: {exc}', file=sys.stderr)
+        return ALLOW
+    try:
+        if event == 'SessionStart':
+            return on_session_start(payload, prof)
+        if event == 'PreToolUse':
+            return on_pre_tool_use(payload, prof, identities, cwd)
+        if event == 'PostToolUse':
+            return on_post_tool_use(payload, prof, cwd)
+    except Exception as exc:
+        print(f'ros2-gate: internal error, allowing: {exc}', file=sys.stderr)
+    return ALLOW
+
+
+if __name__ == '__main__':
+    sys.exit(main())

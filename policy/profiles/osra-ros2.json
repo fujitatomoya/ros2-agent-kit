@@ -1,0 +1,45 @@
+{
+  "id": "osra-ros2",
+  "description": "ROS 2 core repositories under the ros2 GitHub organization, governed by the OSRF generative-tools policy and the ROS PMC guidelines.",
+  "applies_to": {
+    "remotes": ["github.com/ros2/*"]
+  },
+  "sources": [
+    "osrf-genai-policy",
+    "ros-pmc-ai-guidelines",
+    "ros2-developer-guide",
+    "ros2-making-a-pr",
+    "ros2-org-templates"
+  ],
+  "rules": {
+    "dco": {
+      "required": true,
+      "signoff_must_match_author": true,
+      "forbid_agent_identity": true
+    },
+    "ai_disclosure": {
+      "pull_request": "required",
+      "issue": "required",
+      "commit_trailer": "recommended",
+      "trailer_format": "Assisted-by: {agent}:{model} [{tools}]"
+    },
+    "authorship": {
+      "pr_description": "human",
+      "issue_body": "human",
+      "discussion_replies": "human",
+      "agent_may_post": false
+    },
+    "hooks": {
+      "allow_bypass": false
+    },
+    "branching": {
+      "target": "rolling",
+      "backport_title": "[{Distro}] {original title}"
+    },
+    "verification": {
+      "build": "required",
+      "tests": "required",
+      "lint": "ament_lint_common"
+    }
+  }
+}

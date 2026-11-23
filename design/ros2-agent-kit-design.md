@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Draft v0.6 for review |
+| Status | Draft v0.7, M0 implemented |
 | Date | 2026-11-23 |
 | Owner | Tomoya Fujita |
 | Repository | <https://github.com/fujitatomoya/ros2-agent-kit> |
@@ -161,7 +161,8 @@ flowchart LR
 ### 6.2 The gate engine: `ros2-gate`
 
 `ros2-gate` is a single command-line tool written in Python with the standard library only.
-ROS 2 environments always have `python3`, so it needs no installation step inside the plugin.
+It supports Python 3.10 and newer, because Ubuntu 22.04 and Humble ship 3.10.
+ROS 2 environments always have `python3`, so it needs no installation step inside the plugin: `python3 gate/ros2-gate <subcommand>`.
 It makes no network calls and never modifies files unless a subcommand says so.
 Helpers that need the GitHub API, such as package detection, live in `tools/` and stay out of the gate engine, see section 6.6.
 
@@ -178,46 +179,43 @@ Helpers that need the GitHub API, such as package detection, live in `tools/` an
 
 Hooks, git hooks, and CI all call these same subcommands.
 A rule therefore has one implementation and one set of unit tests.
+Exit codes are uniform: 0 for pass or allow, 1 for fail or block, 2 for a usage or runtime error.
+`run` and `evidence` arrive with the evidence ledger in M2; the other subcommands exist since M0.
 
 ### 6.3 Policy as data
 
 Rules live in profile files, not in skill prose.
-A profile is selected by the git remote of the working repository.
+A profile is selected by the git remote of the working repository, with the `upstream` remote checked before `origin` so that a fork with the usual `upstream` remote gets the upstream profile.
+Profiles are JSON, not YAML, because the gate engine is standard-library Python and Python 3.10 has no YAML or TOML parser.
 
-```yaml
-id: osra-ros2
-applies_to:
-  remotes:
-    - github.com/ros2/*
-sources:
-  - id: osrf-genai-policy
-    url: https://osralliance.org/osrf-policy-on-the-use-of-generative-tools-in-contributions/
-    verified: 2026-11-23
-  - id: ros2-developer-guide
-    url: https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Developer-Guide.html
-    verified: 2026-11-23
-rules:
-  dco:
-    required: true
-    signoff_must_match_author: true
-    forbid_agent_identity: true
-  ai_disclosure:
-    pull_request: required
-    commit_trailer: recommended
-    trailer_format: "Assisted-by: {agent}:{model} [{tools}]"
-  authorship:
-    pr_description: human
-    issue_body: human
-    discussion_replies: human
-    agent_may_post: false
-  branching:
-    target: rolling
-    backport_title: "[{Distro}] {original title}"
-  verification:
-    build: required
-    tests: required
-    lint: ament_lint_common
+```json
+{
+  "id": "osra-ros2",
+  "applies_to": {"remotes": ["github.com/ros2/*"]},
+  "sources": ["osrf-genai-policy", "ros-pmc-ai-guidelines", "ros2-developer-guide"],
+  "rules": {
+    "dco": {"required": true, "signoff_must_match_author": true, "forbid_agent_identity": true},
+    "ai_disclosure": {
+      "pull_request": "required",
+      "issue": "required",
+      "commit_trailer": "recommended",
+      "trailer_format": "Assisted-by: {agent}:{model} [{tools}]"
+    },
+    "authorship": {
+      "pr_description": "human",
+      "issue_body": "human",
+      "discussion_replies": "human",
+      "agent_may_post": false
+    },
+    "hooks": {"allow_bypass": false},
+    "branching": {"target": "rolling", "backport_title": "[{Distro}] {original title}"},
+    "verification": {"build": "required", "tests": "required", "lint": "ament_lint_common"}
+  }
+}
 ```
+
+Sources are referenced by id and described once in `policy/sources.json`, which carries the URL, the last-verified date, and the content hash for the watch job of section 11.2.
+The list of agent identities that may never author or sign off a commit lives in `policy/agent-identities.json`, shared by all profiles.
 
 Initial profiles:
 
@@ -244,6 +242,8 @@ The PR packet lists those entries as facts, and the agent may not state any othe
 
 The kit does not ship copies of upstream templates.
 It reads `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/` from the target repository, and falls back to the organization defaults in `ros2/.github`.
+Most `ros2` repositories rely on the organization defaults, and the gate has no network access, so `tools/fetch_templates.py` caches them under `$XDG_CACHE_HOME/ros2-agent-kit/templates/<org>/` and the gate reads that cache.
+Issue templates in the `ros2` organization are GitHub issue forms, and the gate reads the subset of that YAML it needs with a line scanner rather than a YAML parser.
 This removes one whole class of drift.
 
 ### 6.6 Network helpers in `tools/`
@@ -253,7 +253,8 @@ Those helpers live in `tools/`, are stdlib-only Python like the gate engine, and
 They are the only code in the kit that touches the network, and every call uses the user's ambient token.
 Keeping them out of `ros2-gate` preserves the guarantee that hooks and CI gates never make network calls.
 
-The first helper is `detect_packages.py`, described in section 8.6.
+The first helper is `fetch_templates.py`, which caches an organization's default PR and issue templates for section 6.5.
+The second is `detect_packages.py`, described in section 8.6.
 It has a local mode that reads `git diff` against the merge base and walks the working tree for `package.xml`, so contribution skills can use it without any network access.
 
 ## 7. Components
@@ -317,16 +318,19 @@ This means reading `$ROS_DISTRO`, installed headers, and `ros2` command output.
 
 | ID | Trigger | Check | Default |
 | --- | --- | --- | --- |
-| G1 | `git commit` | Sign-off present and equal to the commit author; author is not an agent identity; `Assisted-by` format when the trailer is present | Block |
+| G1 | `git commit` | Sign-off present and equal to the commit author; author is not an agent identity; `--no-verify` is rejected; `Assisted-by` format when the trailer is present | Block |
 | G2 | `git push` | `check-range` passes; evidence exists for the current tree | Block |
-| G3 | `gh pr create`, `gh issue create`, any `gh` comment or review command | Agent posting is not allowed under the profile | Block, with instructions for the human |
-| G4 | PR or issue body file written | Template sections present; disclosure field filled; `Fixes #` present when an issue exists | Block |
+| G3 | `gh pr create`, `gh issue create`, any `gh` comment, review, edit, close, or merge command, and any mutating `gh api` call | Agent posting is not allowed under the profile | Block, with instructions for the human |
+| G4 | `PR_BODY.md` or `ISSUE_BODY.md` written | Template sections present; description and disclosure filled; no placeholder left; `Fixes #` present when an issue exists | Block |
 | G5 | Session start | Print the active profile and distribution in a few lines | Inform |
 | G6 | Source file edited | Fast formatter check on the changed file | Advise |
 | G7 | End of turn | List any verification claims without matching evidence | Advise |
 
 Gates match only `git` and `gh` commands and the kit's own files.
 They must stay fast and narrow so that they coexist with other plugins' hooks, for example ECC's GateGuard.
+The guard splits compound command lines and inspects every simple command, including the argument of `bash -c`, so a blocked command cannot hide behind `&&`.
+Before a commit exists, the guard can only check what the command line reveals: the identity git will use, the `-s` flag, or a message that already carries a sign-off.
+The committed result is checked again by `check-commit` in the `commit-msg` git hook and by `check-range` in CI.
 
 ### 7.3 Commands
 
@@ -356,6 +360,7 @@ Two are planned: a read-only `contribution-auditor` that runs before the PR pack
 ### 8.2 PR packet
 
 `pr-prepare` produces a local file, not a pull request.
+The file is `PR_BODY.md` under `.ros2-agent-kit/` in the repository, a directory the kit adds to `.git/info/exclude`, and G4 recognizes it by name wherever it is written.
 It contains:
 
 1. The target repository's template with its headings intact.
@@ -470,9 +475,10 @@ The skill reuses the previous command from the conversation, applies the delta, 
 | Skills | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` |
 | Always-on context | Session-start hook; repository `CLAUDE.md` importing `AGENTS.md` | `AGENTS.md` | `GEMINI.md` or `contextFileName` |
 | Commands | Skills, invoked directly | Skills, invoked directly | `commands/*.toml` |
+| Hook file | `hooks/hooks.json`, always merged with any manifest-declared file | `hooks/hooks.json` | `hooks/hooks.json`, fixed, no manifest override |
 | Tool hook event | `PreToolUse`, matcher `Bash` | `PreToolUse`, matcher `Bash` | `BeforeTool`, matcher `run_shell_command` |
-| Block signal | Exit code 2 or JSON decision | Exit code 2 or JSON decision | Exit code 2 or JSON decision |
-| Hook caveats | None known | User must review and trust; re-review when a script changes | Enablement setting to be checked |
+| Block signal | Exit code 2 with the reason on stderr, or JSON decision | Exit code 2 or JSON decision | Exit code 2 or JSON decision |
+| Hook caveats | None known | User must review and trust; re-review when a script changes | Enablement setting to be checked; the product was renamed Antigravity CLI in June 2026 |
 | Subagents | `agents/*.md` | To be checked | `agents/*.md`, preview |
 
 Tools without a plugin system, such as Cursor and Copilot, get tier A through `AGENTS.md` and tier C through git hooks and CI.
@@ -487,18 +493,21 @@ ros2-agent-kit/
 │   ├── profiles/                # osra-ros2.yaml, app.yaml, generic-dco.yaml
 │   └── sources.yaml             # upstream documents and last-verified dates
 ├── gate/
+│   ├── ros2-gate                # launcher, no installation step
 │   ├── ros2_gate/               # stdlib-only Python package, no network
-│   └── tests/
+│   └── tests/                   # unit tests plus recorded hook payloads and template fixtures
 ├── tools/
-│   ├── detect_packages.py       # GitHub API helpers, read-only, network allowed
-│   └── tests/
+│   ├── fetch_templates.py       # caches an org's default templates for the gate
+│   └── detect_packages.py       # GitHub API helpers, read-only, network allowed
 ├── adapters/
-│   ├── claude_codex_hook.py     # stdin JSON -> ros2-gate guard
-│   └── gemini_hook.py
+│   ├── claude_codex_hook.py     # stdin JSON -> ros2-gate; shared by Claude Code and Codex
+│   └── gemini_hook.py           # M1
 ├── hooks/
-│   ├── hooks.json               # Gemini event names (fixed path for extensions)
-│   └── cc-hooks.json            # Claude Code and Codex event names
-├── commands/                    # Gemini TOML wrappers
+│   └── hooks.json               # Claude Code and Codex event names, see section 9.3
+├── gemini/                      # M1: sources the CI job assembles into the generated branch
+│   ├── gemini-extension.json
+│   ├── hooks.json               # Gemini event names
+│   └── commands/                # Gemini TOML wrappers
 ├── agents/                      # optional subagents
 ├── templates/
 │   └── AGENTS.md                # draft of the org default, proposed for ros2/.github
@@ -506,24 +515,31 @@ ros2-agent-kit/
 │   ├── action.yml               # GitHub Action for tier C
 │   └── .pre-commit-hooks.yaml
 ├── evals/
+├── .github/                     # this repository's own templates and CI
 ├── .claude-plugin/              # plugin.json, marketplace.json
 ├── .codex-plugin/               # plugin.json
 ├── .agents/plugins/             # marketplace.json for Codex
-├── gemini-extension.json
 ├── AGENTS.md                    # this repository's own rules
+├── CLAUDE.md                    # imports AGENTS.md
 ├── GEMINI.md                    # imports AGENTS.md
 └── CODEOWNERS
 ```
 
 ### 9.3 Packaging decision and fallback
 
-The preferred approach is one root that is valid for all three harnesses at once.
+The preferred approach was one root that is valid for all three harnesses at once.
 Claude Code and Codex share one hook file because their event names, matcher shape, and block signal match, and Codex sets `CLAUDE_PLUGIN_ROOT` for compatibility.
-Gemini needs its own file at the fixed `hooks/hooks.json` path.
 
-One point must be validated in M0.
-It is not yet confirmed that Claude Code ignores the default `hooks/hooks.json` when the manifest names a different hook file.
-If it does not, the fallback is a CI job that generates one directory per harness from the canonical sources, with a drift check on every PR.
+The M0 packaging spike settled the open point against the single root.
+Claude Code always loads `hooks/hooks.json` and merges any manifest-declared hook file into it, and Gemini fixes its hooks at the same path with different event names.
+One file cannot serve both, so the decision is:
+
+1. `hooks/hooks.json` carries the Claude Code and Codex hooks, and the plugin manifest declares nothing extra.
+2. Gemini gets a generated branch.
+   A CI job assembles the canonical skills, the gate, the adapters, and the Gemini-specific files from `gemini/` into a `gemini` branch, and users install with `gemini extensions install <url> --ref gemini`.
+   The job runs a drift check on every PR so the branch can never fall behind `main`.
+
+The generated branch is validated in M1 together with the Gemini adapter.
 
 ### 9.4 Distribution
 
@@ -544,9 +560,11 @@ Expected install commands, to be confirmed in M1:
 codex plugin marketplace add fujitatomoya/ros2-agent-kit
 codex plugin add ros2@ros2-agent-kit
 
-# Gemini CLI
-gemini extensions install https://github.com/fujitatomoya/ros2-agent-kit
+# Gemini CLI, from the generated branch of section 9.3
+gemini extensions install https://github.com/fujitatomoya/ros2-agent-kit --ref gemini
 ```
+
+Claude Code 2.1.275 and later also accept the one-step form `/plugin install ros2 --marketplace fujitatomoya/ros2-agent-kit`.
 
 The plugin name `ros2` is chosen deliberately, because the intent is to donate the project to the ROS 2 mainline, see section 11.5.
 Until that happens, the README states that this is a personal project and not yet an official ROS project.
@@ -664,6 +682,7 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | The kit is read as endorsing low-effort AI contributions | Gates default to blocking; the agent cannot post; the README states the policy first |
 | Contributors disable hooks | Tier C in CI is independent of the contributor's tool |
 | Scope creep into ecosystem stacks | Out of scope for the core; satellite packs deferred |
+| Gemini CLI was renamed Antigravity CLI in June 2026 and its extension format may move | Gemini packaging is generated from canonical sources, so only the generator changes; verified at M1 |
 | Single maintainer | Small core, source watch job, removal of skills that fall behind |
 | `ros-ci-for-pr` lags a new distribution | Surface the upstream error with update guidance; do not install from forks |
 | A CI run is launched by mistake and consumes the shared build farm | Confirmation on every run; badges opt-in; no cross-session approval |
@@ -688,11 +707,16 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | 2026-11-23 | Output generated by an upstream tool that the human confirmed and ran, such as the status badges of `ros-ci-for-pr -c` or a bloom release PR, is not agent authorship; P4 and G3 do not apply to it, and the confirmation rule in section 8.6 does. |
 | 2026-11-23 | An unsupported target distribution is surfaced as the upstream error with guidance; the kit does not install from forks. |
 | 2026-11-23 | Package auto-detection is proposed upstream to `ros-github-scripts`; the kit keeps its own script until that lands, as it does with the `AGENTS.md` draft. |
+| 2026-11-23 | Profiles, sources, and the agent identity list are JSON, because the gate must run on Python 3.10 with the standard library only. |
+| 2026-11-23 | `hooks/hooks.json` serves Claude Code and Codex; Gemini is packaged as a generated branch, because both products fix the hook file at the same path with different event names. |
+| 2026-11-23 | G1 also rejects `git commit --no-verify`, and G3 also covers `gh pr edit`, `close`, `merge`, and mutating `gh api` calls, because each is a way around the rule it protects. |
+| 2026-11-23 | Organization default templates are cached locally by `tools/fetch_templates.py`; the gate reads the cache and stays offline. |
 
 ### 16.2 Open
 
 No design questions are open.
-The items marked "to be confirmed" in section 9 are validated during M0 and M1.
+The hook-file question of section 9.3 was settled in M0.
+The generated Gemini branch and the Jenkins credential handling of section 8.6 are validated in M1.
 How the installed `ros-ci-for-pr` authenticates to Jenkins, and whether that works inside an agent session, is confirmed in M1 before `ci-trigger` ships.
 
 ## 17. Sources

@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    name: gate tests (python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.10 is Ubuntu 22.04 / Humble, 3.12 is Ubuntu 24.04 / Jazzy and Kilted.
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: unit tests
+        run: cd gate && python3 -m unittest discover -s tests -t . -v
+      - name: validate json
+        run: |
+          python3 - <<'PY'
+          import glob, json
+          files = glob.glob('policy/**/*.json', recursive=True) + glob.glob('.claude-plugin/*.json') + ['hooks/hooks.json']
+          for f in files:
+              json.load(open(f))
+              print('ok', f)
+          PY
+      - name: dogfood ros2-gate on the PR commits
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 gate/ros2-gate --profile osra-ros2 check-range \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}"
+      - name: license headers
+        run: |
+          missing=0
+          for f in $(git ls-files '*.py' 'gate/ros2-gate'); do
+            if ! grep -q 'Licensed under the Apache License, Version 2.0' "$f"; then
+              echo "missing license header: $f"; missing=1
+            fi
+          done
+          exit $missing
