@@ -21,6 +21,8 @@
 Each entry in policy/sources.json has a URL, and optionally a watch_url that is
 fetched instead when the canonical page blocks automated clients (the OSRF
 policy page does; its Discourse announcement thread is watched in its place).
+For a Discourse topic URL the hash covers the title and the first post's
+rendered body from the topic JSON, since the HTML page changes on every load.
 For a GitHub repository URL the
 hash is the SHA of the repository's default branch tree, read through the API.
 For a web page the hash covers the visible text of the page with tags and
@@ -45,6 +47,7 @@ from pathlib import Path
 
 SOURCES = Path(__file__).resolve().parent.parent / 'policy' / 'sources.json'
 GITHUB_REPO_RE = re.compile(r'^https://github\.com/([\w.-]+)/([\w.-]+)/?$')
+DISCOURSE_TOPIC_RE = re.compile(r'^(https://[\w.-]+)/t/[\w-]+/(\d+)/?$')
 
 
 def get_token():
@@ -89,6 +92,15 @@ def current_hash(url: str, token=None) -> str:
         ref = json.loads(fetch(f'https://api.github.com/repos/{owner}/{repo}/commits/{branch}',
                                token, 'application/vnd.github+json'))
         return 'tree:' + ref['commit']['tree']['sha']
+    m = DISCOURSE_TOPIC_RE.match(url)
+    if m:
+        # Discourse pages carry view counts and relative times that change on every load;
+        # the topic JSON gives the first post's rendered body, which changes only when edited.
+        base, topic_id = m.groups()
+        topic = json.loads(fetch(f'{base}/t/{topic_id}.json', None, 'application/json'))
+        first = topic['post_stream']['posts'][0]
+        body = topic.get('title', '') + '\n' + page_text(first.get('cooked', '').encode())
+        return 'post:' + hashlib.sha256(body.encode()).hexdigest()
     return 'text:' + hashlib.sha256(page_text(fetch(url, token)).encode()).hexdigest()
 
 

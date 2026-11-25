@@ -42,6 +42,7 @@ jobs:
           print('\n'.join(lines))
           PY
           )"
+          gh label create source-watch --description "An upstream policy document changed" --color D93F0B 2>/dev/null || true
           existing="$(gh issue list --label source-watch --state open --json number --jq '.[0].number')"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"

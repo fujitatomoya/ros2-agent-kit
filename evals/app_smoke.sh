@@ -30,8 +30,11 @@ apt-get install -y -qq --no-install-recommends \
   "ros-$ROS_DISTRO-ament-cmake-pytest" \
   "ros-$ROS_DISTRO-std-msgs" \
   python3-pytest >/dev/null
+# The ROS setup scripts read variables that may be unset, so relax -u around them.
+set +u
 # shellcheck disable=SC1090
 . "/opt/ros/$ROS_DISTRO/setup.sh"
+set -u
 ws="$(mktemp -d)"
 mkdir -p "$ws/src"
 cd "$ws/src"
