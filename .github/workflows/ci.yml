@@ -11,8 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # 3.10 is Ubuntu 22.04 / Humble, 3.12 is Ubuntu 24.04 / Jazzy and Kilted.
-        python: ["3.10", "3.12"]
+        # 3.10 is Ubuntu 22.04 / Humble, 3.12 is Ubuntu 24.04 / Jazzy and Kilted,
+        # 3.14 is Ubuntu 26.04 / Lyrical and Rolling.
+        python: ["3.10", "3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
         with:
