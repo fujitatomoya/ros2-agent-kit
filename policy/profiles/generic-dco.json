@@ -1,0 +1,41 @@
+{
+  "id": "generic-dco",
+  "description": "Any repository that requires the Developer Certificate of Origin but has no dedicated profile.",
+  "applies_to": {
+    "remotes": [],
+    "detect": "dco"
+  },
+  "sources": [],
+  "rules": {
+    "dco": {
+      "required": true,
+      "signoff_must_match_author": true,
+      "forbid_agent_identity": true
+    },
+    "ai_disclosure": {
+      "pull_request": "optional",
+      "issue": "optional",
+      "commit_trailer": "recommended",
+      "trailer_format": "Assisted-by: {agent}:{model} [{tools}]"
+    },
+    "authorship": {
+      "pr_description": "any",
+      "issue_body": "any",
+      "discussion_replies": "any",
+      "agent_submission": "allow",
+      "agent_discussion": "allow"
+    },
+    "hooks": {
+      "allow_bypass": false
+    },
+    "branching": {
+      "target": null,
+      "backport_title": null
+    },
+    "verification": {
+      "build": "required",
+      "tests": "required",
+      "lint": null
+    }
+  }
+}

@@ -1,0 +1,4 @@
+description = "ros2-agent-kit: apply the pr-prepare skill"
+prompt = """Read the skill file at skills/pr-prepare/SKILL.md inside the ros2 extension and apply it to this request:
+
+{{args}}"""

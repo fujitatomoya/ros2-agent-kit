@@ -1,0 +1,35 @@
+{
+  "_comment": "Identities that are never allowed as commit author or in a Signed-off-by trailer under a profile with dco.forbid_agent_identity. Patterns are case-insensitive shell globs. Keep name patterns narrow: 'Claude' is also a human given name, so match the full agent names, not substrings. A literal '[' must be written as '[[]' because '[...]' is a character class in a glob.",
+  "emails": [
+    "noreply@anthropic.com",
+    "*@anthropic.com",
+    "copilot@github.com",
+    "*[[]bot]@users.noreply.github.com",
+    "noreply@openai.com",
+    "codex@openai.com",
+    "*@google.com"
+  ],
+  "names": [
+    "Claude",
+    "Claude Code",
+    "Claude Fable*",
+    "Claude Opus*",
+    "Claude Sonnet*",
+    "Claude Haiku*",
+    "Claude Mythos*",
+    "Anthropic Claude",
+    "Codex",
+    "OpenAI Codex",
+    "ChatGPT",
+    "Gemini",
+    "Gemini CLI",
+    "Google Gemini",
+    "GitHub Copilot",
+    "Copilot",
+    "copilot-swe-agent*",
+    "Devin",
+    "Devin AI*",
+    "Cursor Agent",
+    "*[[]bot]"
+  ]
+}

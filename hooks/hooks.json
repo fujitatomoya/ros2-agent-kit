@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "name": "ros2-gate profile",
+            "command": "python3 \"${extensionPath}${/}adapters${/}gemini_hook.py\"",
+            "timeout": 15000
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "ros2-gate guard",
+            "command": "python3 \"${extensionPath}${/}adapters${/}gemini_hook.py\"",
+            "timeout": 15000
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace|edit",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "ros2-gate check body",
+            "command": "python3 \"${extensionPath}${/}adapters${/}gemini_hook.py\"",
+            "timeout": 15000
+          }
+        ]
+      }
+    ]
+  }
+}
