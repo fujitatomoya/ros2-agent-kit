@@ -28,7 +28,7 @@ It writes no code.
    Repository files override the kit's defaults.
 3. Under the `osra-ros2` profile, these rules apply from now on:
    - commits are authored and signed off by the human, with an `Assisted-by` trailer when you helped;
-   - you do not open PRs or issues and do not post comments, the human does;
+   - you open or change a PR or an issue only after the human confirms the exact command, and you never post comments or reviews;
    - you only report build, lint, and test results that you actually ran.
 
 ## 2. The issue

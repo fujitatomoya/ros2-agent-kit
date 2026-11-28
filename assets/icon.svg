@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t d">
+<title id="t">ros2-agent-kit</title>
+<desc id="d">A robot arm with three joints that forms a check mark, white on a purple tile, with the end joint in green.</desc>
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f45c9"/><stop offset="1" stop-color="#4a2a96"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="url(#g)"/>
+<path d="M116,266 L210,360 L396,152" fill="none" stroke="#ffffff" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="116" cy="266" r="40" fill="#ffffff"/>
+<circle cx="116" cy="266" r="17" fill="#5c37ae"/>
+<circle cx="210" cy="360" r="40" fill="#ffffff"/>
+<circle cx="210" cy="360" r="17" fill="#5532a5"/>
+<circle cx="396" cy="152" r="40" fill="#69f0ae"/>
+<circle cx="396" cy="152" r="17" fill="#643dba"/>
+</svg>

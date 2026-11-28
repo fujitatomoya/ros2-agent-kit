@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" width="1100" height="440" role="img" aria-labelledby="t d" font-family="'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" fill="#1f2933" text-anchor="middle">
+<title id="t">How a policy profile is selected</title>
+<desc id="d">Four checks in order: an explicit environment variable, a git remote matching github.com/ros2, a repository that mentions the DCO, otherwise the app profile. Each leads to a profile card listing its rules.</desc>
+<defs><marker id="m0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/></marker><marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b26a00"/></marker><marker id="m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker></defs>
+<rect width="1100" height="440" fill="#ffffff"/>
+<rect x="20" y="28" width="235" height="70" rx="8" fill="#f1f3f5" stroke="#7b8794" stroke-width="1.5"/>
+<text x="137.5" y="60" font-size="15" font-weight="700">1. Forced by you?</text>
+<text x="137.5" y="77.6" font-size="12" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">ROS2_GATE_PROFILE=...</text>
+<rect x="295" y="28" width="235" height="70" rx="8" fill="#f1f3f5" stroke="#7b8794" stroke-width="1.5"/>
+<text x="412.5" y="60" font-size="15" font-weight="700">2. Remote matches?</text>
+<text x="412.5" y="77.6" font-size="12" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">github.com/ros2/*</text>
+<rect x="570" y="28" width="235" height="70" rx="8" fill="#f1f3f5" stroke="#7b8794" stroke-width="1.5"/>
+<text x="687.5" y="59.6" font-size="15" font-weight="700">3. DCO project?</text>
+<text x="687.5" y="77.7" font-size="12.5" fill="#52606d">DCO file, CONTRIBUTING, workflow</text>
+<rect x="845" y="28" width="235" height="70" rx="8" fill="#f1f3f5" stroke="#7b8794" stroke-width="1.5"/>
+<text x="962.5" y="59.6" font-size="15" font-weight="700">4. Otherwise</text>
+<text x="962.5" y="77.7" font-size="12.5" fill="#52606d">your own code</text>
+<path d="M255,63 L295,63" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="275" y="54" font-size="12" fill="#52606d">no</text>
+<path d="M530,63 L570,63" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="550" y="54" font-size="12" fill="#52606d">no</text>
+<path d="M805,63 L845,63" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="825" y="54" font-size="12" fill="#52606d">no</text>
+<path d="M137.5,98 L137.5,150" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="147.5" y="129" font-size="12" fill="#52606d" text-anchor="start">yes</text>
+<rect x="20" y="150" width="235" height="272" rx="8" fill="#f1f3f5" stroke="#7b8794" stroke-width="2"/>
+<text x="137.5" y="186" font-size="16" font-weight="700">the named profile</text>
+<line x1="38" y1="202" x2="237" y2="202" stroke="#7b8794" stroke-width="1" opacity="0.5"/>
+<circle cx="44" cy="227" r="3.5" fill="#7b8794"/>
+<text x="56" y="232" font-size="14" text-anchor="start">Useful for testing</text>
+<circle cx="44" cy="257" r="3.5" fill="#7b8794"/>
+<text x="56" y="262" font-size="14" text-anchor="start">Overrides detection</text>
+<path d="M412.5,98 L412.5,150" fill="none" stroke="#c62828" stroke-width="1.8" marker-end="url(#m1)"/>
+<text x="422.5" y="129" font-size="12" fill="#52606d" text-anchor="start">yes</text>
+<rect x="295" y="150" width="235" height="272" rx="8" fill="#fdecea" stroke="#c62828" stroke-width="2"/>
+<text x="412.5" y="186" font-size="18" font-weight="700" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">osra-ros2</text>
+<line x1="313" y1="202" x2="512" y2="202" stroke="#c62828" stroke-width="1" opacity="0.5"/>
+<circle cx="319" cy="227" r="3.5" fill="#c62828"/>
+<text x="331" y="232" font-size="14" text-anchor="start">Sign-off required</text>
+<circle cx="319" cy="257" r="3.5" fill="#c62828"/>
+<text x="331" y="262" font-size="14" text-anchor="start">Agent identity rejected</text>
+<circle cx="319" cy="287" r="3.5" fill="#c62828"/>
+<text x="331" y="292" font-size="14" text-anchor="start">Submits after you confirm</text>
+<circle cx="319" cy="317" r="3.5" fill="#c62828"/>
+<text x="331" y="322" font-size="14" text-anchor="start">AI disclosure required</text>
+<circle cx="319" cy="347" r="3.5" fill="#c62828"/>
+<text x="331" y="352" font-size="14" text-anchor="start">Target branch: rolling</text>
+<circle cx="319" cy="377" r="3.5" fill="#c62828"/>
+<text x="331" y="382" font-size="14" text-anchor="start">Build and tests before push</text>
+<circle cx="319" cy="405" r="3.5" fill="#c62828"/>
+<text x="331" y="410" font-size="14" text-anchor="start">Agent does not comment</text>
+<path d="M687.5,98 L687.5,150" fill="none" stroke="#b26a00" stroke-width="1.8" marker-end="url(#m2)"/>
+<text x="697.5" y="129" font-size="12" fill="#52606d" text-anchor="start">yes</text>
+<rect x="570" y="150" width="235" height="272" rx="8" fill="#fff4e0" stroke="#b26a00" stroke-width="2"/>
+<text x="687.5" y="186" font-size="18" font-weight="700" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">generic-dco</text>
+<line x1="588" y1="202" x2="787" y2="202" stroke="#b26a00" stroke-width="1" opacity="0.5"/>
+<circle cx="594" cy="227" r="3.5" fill="#b26a00"/>
+<text x="606" y="232" font-size="14" text-anchor="start">Sign-off required</text>
+<circle cx="594" cy="257" r="3.5" fill="#b26a00"/>
+<text x="606" y="262" font-size="14" text-anchor="start">Agent identity rejected</text>
+<circle cx="594" cy="287" r="3.5" fill="#b26a00"/>
+<text x="606" y="292" font-size="14" text-anchor="start">Agent may post</text>
+<circle cx="594" cy="317" r="3.5" fill="#b26a00"/>
+<text x="606" y="322" font-size="14" text-anchor="start">AI disclosure optional</text>
+<circle cx="594" cy="347" r="3.5" fill="#b26a00"/>
+<text x="606" y="352" font-size="14" text-anchor="start">Build and tests before push</text>
+<path d="M962.5,98 L962.5,150" fill="none" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#m3)"/>
+<rect x="845" y="150" width="235" height="272" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="2"/>
+<text x="962.5" y="186" font-size="18" font-weight="700" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">app</text>
+<line x1="863" y1="202" x2="1062" y2="202" stroke="#2e7d32" stroke-width="1" opacity="0.5"/>
+<circle cx="869" cy="227" r="3.5" fill="#2e7d32"/>
+<text x="881" y="232" font-size="14" text-anchor="start">Sign-off optional</text>
+<circle cx="869" cy="257" r="3.5" fill="#2e7d32"/>
+<text x="881" y="262" font-size="14" text-anchor="start">Agent identity allowed</text>
+<circle cx="869" cy="287" r="3.5" fill="#2e7d32"/>
+<text x="881" y="292" font-size="14" text-anchor="start">Agent may post</text>
+<circle cx="869" cy="317" r="3.5" fill="#2e7d32"/>
+<text x="881" y="322" font-size="14" text-anchor="start">AI disclosure optional</text>
+<circle cx="869" cy="347" r="3.5" fill="#2e7d32"/>
+<text x="881" y="352" font-size="14" text-anchor="start">Build and tests before push</text>
+</svg>

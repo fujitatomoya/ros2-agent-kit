@@ -64,6 +64,16 @@ class GeminiAdapter(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertEqual(out['decision'], 'deny')
         self.assertIn('G3', out['reason'])
+        self.assertIn('blocked', out['reason'])
+
+    def test_before_tool_denies_submission_and_hands_it_to_the_human(self):
+        p = payload('BeforeTool', self.repo, tool_name='run_shell_command',
+                    tool_input={'command': 'gh pr create --fill'})
+        code, out, err = run_hook(p)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out['decision'], 'deny')
+        self.assertIn('G3', out['reason'])
+        self.assertIn('let them run it', out['reason'])
 
     def test_before_tool_allows_silently(self):
         p = payload('BeforeTool', self.repo, tool_name='run_shell_command',

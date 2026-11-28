@@ -4,15 +4,16 @@ description: >
   Build the pull request packet for a ROS 2 mainline contribution: the target repository's
   PR template filled with the facts (Fixes #, the generative-AI disclosure, the verification
   actually performed) and the sections the human must write left for them, plus the exact
-  gh command for the human to submit. Use when the user asks to open, create, prepare, or
-  draft a PR for a ros2/* or ament/* repository, or when a branch is ready for review. Never
-  run gh pr create yourself under the osra-ros2 profile.
+  gh command, which runs only after the human confirms it. Use when the user asks to open,
+  create, prepare, or draft a PR for a ros2/* or ament/* repository, or when a branch is ready
+  for review. Never write the description yourself, and never submit without the human's
+  confirmation.
 ---
 
 # PR packet
 
-You produce a local file, not a pull request.
-The human writes the description and submits.
+You produce a local file first.
+The human writes the description, and the pull request is opened only after they confirm the exact command.
 
 ## 1. Gather the facts
 
@@ -64,7 +65,7 @@ Start the file with a checklist in an HTML comment so GitHub hides it:
 -->
 ```
 
-## 4. Hand over
+## 4. Submit after confirmation
 
 Run the final check once the human has filled the description:
 
@@ -72,10 +73,14 @@ Run the final check once the human has filled the description:
 python3 "${CLAUDE_PLUGIN_ROOT:-.}/gate/ros2-gate" check-pr-body .ros2-agent-kit/PR_BODY.md --issue <n>
 ```
 
-Then give the human the exact command, and do not run it:
+Then show the human the exact command and ask them to confirm it:
 
 ```bash
 gh pr create --repo ros2/<repo> --base rolling --title "<title>" --body-file .ros2-agent-kit/PR_BODY.md
 ```
+
+Confirming means the human wrote the description, understands every change, and verified it; say so when you ask.
+Run the command only after they confirm, and never before the final check passes.
+Gate G3 enforces this: in Claude Code it shows the permission prompt for the command, and in a harness that cannot prompt from a hook it blocks the command, in which case the human runs it.
 
 Mention that the branch must be pushed to their fork first (`git push -u origin <topic>`), that G2 will require evidence for the current tree before the push, and that review replies are theirs to write too; see `review-respond`.

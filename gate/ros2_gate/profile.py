@@ -35,6 +35,7 @@ from .identities import AgentIdentities
 
 KIT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_POLICY_DIR = KIT_ROOT / 'policy'
+POSTING_MODES = ('allow', 'confirm', 'deny')
 
 
 def policy_dir() -> Path:
@@ -65,14 +66,36 @@ class Profile:
     def sources(self) -> List[str]:
         return list(self.data.get('sources', []))
 
+    def posting(self, kind: str) -> str:
+        """How the agent may post to GitHub: ``allow``, ``confirm``, or ``deny``.
+
+        ``kind`` is ``submission`` (create or change a pull request or an issue) or
+        ``discussion`` (a comment or a review). ``confirm`` means the human approves the
+        exact command first.
+        """
+        value = self.rule(f'authorship.agent_{kind}')
+        if value is None:
+            # Profiles written before the split carry one boolean for both kinds.
+            return 'allow' if self.rule('authorship.agent_may_post', True) else 'deny'
+        return value if value in POSTING_MODES else 'deny'
+
     def summary(self) -> str:
         """One line for session-start context."""
         parts = [f'profile {self.id}']
         if self.matched_remote:
             parts.append(f'remote {self.matched_remote}')
         parts.append('DCO required' if self.rule('dco.required') else 'DCO optional')
-        parts.append('agent may not post' if not self.rule('authorship.agent_may_post')
-                     else 'agent may post')
+        submission, discussion = self.posting('submission'), self.posting('discussion')
+        if submission == discussion == 'allow':
+            parts.append('agent may post')
+        else:
+            parts.append({'allow': 'agent may submit PRs and issues',
+                          'confirm': 'agent submits PRs and issues only after the human confirms',
+                          'deny': 'agent may not submit PRs or issues'}[submission])
+            parts.append({'allow': 'agent may post comments and reviews',
+                          'confirm': 'agent posts comments and reviews only after the human '
+                                     'confirms',
+                          'deny': 'agent may not post comments or reviews'}[discussion])
         target = self.rule('branching.target')
         if target:
             parts.append(f'target branch {target}')

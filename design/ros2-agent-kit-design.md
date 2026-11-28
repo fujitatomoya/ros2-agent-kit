@@ -81,7 +81,7 @@ The kit therefore includes maintainer workflows as a third job, built on the sam
 1. Controlling robots at runtime through an agent.
 2. Covering Nav2, MoveIt 2, ros2_control, or Autoware in the first version.
    Those belong to their own maintainers, see section 11.3.
-3. Submitting pull requests, issues, or review replies on the human's behalf.
+3. Submitting pull requests or issues without the human's confirmation, and writing or posting review replies on the human's behalf.
 4. Duplicating general skills such as TDD or generic code review.
 5. Replacing human review or the DCO attestation.
 6. Forking or replacing upstream maintainer tools such as `ros-ci-for-pr`; improvements go upstream.
@@ -105,6 +105,7 @@ Skills explain how to pass the gate.
 **P4. The human owns the words.**
 The agent may write code, tests, and documentation.
 The agent does not write PR descriptions, issue text, or discussion replies for upstream.
+It may run the command that submits a pull request or an issue once the human has confirmed it, and it never posts a reply.
 
 **P5. No claim without evidence.**
 The agent may only report a build, lint, or test result that was actually run on the current tree.
@@ -150,7 +151,7 @@ flowchart LR
   I --> V[Verify: build, lint, test]
   V --> C[Commit with sign-off]
   C --> K[PR packet]
-  K --> H[Human writes and submits]
+  K --> H[Human writes and confirms the submission]
   H --> R[Review]
   G[ros2-gate] -.-> V
   G -.-> C
@@ -177,13 +178,14 @@ Helpers that need the GitHub API, such as package detection, live in `tools/` an
 | `evidence` | Print the evidence that matches the current tree |
 | `check-claims` | Find verification claims in a message that have no matching evidence (G7) |
 | `lint-file` | Fast, advisory style check on edited files (G6) |
-| `guard` | Decide whether a shell command is allowed under the active profile |
+| `guard` | Decide whether a shell command is allowed, blocked, or needs the human's confirmation under the active profile |
 | `doctor` | Report the prerequisites of the kit in this environment: identity, profile, templates, tools, token |
 | `install-hooks` | Write `commit-msg` and `pre-push` git hooks that call the gate, for contributors without pre-commit |
 
 Hooks, git hooks, and CI all call these same subcommands.
 A rule therefore has one implementation and one set of unit tests.
 Exit codes are uniform: 0 for pass or allow, 1 for fail or block, 2 for a usage or runtime error.
+`guard` also returns 3 for a command that the human must confirm first.
 All subcommands exist since M2.
 
 ### 6.3 Policy as data
@@ -209,7 +211,8 @@ Profiles are JSON, not YAML, because the gate engine is standard-library Python 
       "pr_description": "human",
       "issue_body": "human",
       "discussion_replies": "human",
-      "agent_may_post": false
+      "agent_submission": "confirm",
+      "agent_discussion": "deny"
     },
     "hooks": {"allow_bypass": false},
     "branching": {"target": "rolling", "backport_title": "[{Distro}] {original title}"},
@@ -217,6 +220,10 @@ Profiles are JSON, not YAML, because the gate engine is standard-library Python 
   }
 }
 ```
+
+`agent_submission` and `agent_discussion` each take `allow`, `confirm`, or `deny`.
+A submission creates or changes a pull request or an issue, a discussion is a comment or a review, and `confirm` means the human approves the exact command first.
+A profile written before this split, with the single `agent_may_post` flag, is read as `allow` or `deny` for both, and an unknown value is read as `deny`.
 
 Sources are referenced by id and described once in `policy/sources.json`, which carries the URL, the last-verified date, and the content hash for the watch job of section 11.2.
 The list of agent identities that may never author or sign off a commit lives in `policy/agent-identities.json`, shared by all profiles.
@@ -328,7 +335,7 @@ Each application skill opens with the command that performs that check, and mark
 | --- | --- | --- | --- |
 | G1 | `git commit` | Sign-off present and equal to the commit author; author is not an agent identity; `--no-verify` is rejected; `Assisted-by` format when the trailer is present | Block |
 | G2 | `git push` | `check-range` passes; evidence exists for the current tree | Block |
-| G3 | `gh pr create`, `gh issue create`, any `gh` comment, review, edit, close, or merge command, and any mutating `gh api` call | Agent posting is not allowed under the profile | Block, with instructions for the human |
+| G3 | `gh pr create`, `gh issue create`, any `gh` comment, review, edit, close, or merge command, and any mutating `gh api` call | A submission, meaning a command that creates or changes a pull request or an issue, runs only after the human confirms it; a comment or a review is not allowed for the agent | Confirm for a submission, block for a comment or a review |
 | G4 | `PR_BODY.md` or `ISSUE_BODY.md` written | Template sections present; description and disclosure filled; no placeholder left; `Fixes #` present when an issue exists | Block |
 | G5 | Session start | Print the active profile and distribution in a few lines | Inform |
 | G6 | Source file edited | The ament linter for the file type when installed, else 100 columns, tabs, one sentence per line | Advise |
@@ -336,6 +343,13 @@ Each application skill opens with the command that performs that check, and mark
 
 G2 skips the range check when no base branch can be determined and allows `--dry-run` and branch deletions.
 G6 and G7 return `additionalContext` to the agent and never block; G7 stays quiet when the harness reports that a stop hook is already active, to avoid loops.
+
+G3 asks for confirmation through the harness's own permission prompt, so the human sees the exact command and the reason before it runs.
+By confirming, the human states that they wrote the description, understand every change, and verified it.
+Only Claude Code can show that prompt from a hook today, through the `ask` permission decision.
+Codex parses `ask` and then runs the command, and Gemini CLI does not document it, so in those harnesses, and in Claude Code's bypass-permissions and do-not-ask modes, G3 blocks a submission and gives the human the command to run.
+A command line that mixes a submission with a comment is blocked, because a block wins over a confirmation.
+The OSRF policy is the reason for the split: it forbids an agent writing the description and taking part in a discussion, and it does not say who runs the submit command.
 
 Gates match only `git` and `gh` commands and the kit's own files.
 They must stay fast and narrow so that they coexist with other plugins' hooks, for example ECC's GateGuard.
@@ -367,12 +381,13 @@ Both are Markdown files with `name`, `description`, and `tools` front matter, li
 | Commit message | Draft the technical summary and trailers | Sign off under any identity other than the human's |
 | PR description | Fill factual fields and the disclosure field | Write the summary or rationale |
 | Issue body | Insert verbatim command output | Write the description, reproduction, or expected and actual behavior |
-| Replies on GitHub, Discourse, Zulip | Help the human understand the comment | Draft or post the reply |
+| Submitting a pull request or an issue | Run the command after the human confirms it | Submit without confirmation |
+| Replies on GitHub, Discourse, Zulip | Help the human understand the comment | Draft or post the reply, even with confirmation |
 | CI jobs on ci.ros2.org | Detect packages, compose the command, run it after confirmation | Launch without confirmation, or post badge comments unless asked |
 
 ### 8.2 PR packet
 
-`pr-prepare` produces a local file, not a pull request.
+`pr-prepare` produces a local file first, and the pull request follows only after the human confirms.
 The file is `PR_BODY.md` under `.ros2-agent-kit/` in the repository, a directory the kit adds to `.git/info/exclude`, and G4 recognizes it by name wherever it is written.
 It contains:
 
@@ -383,8 +398,8 @@ It contains:
 5. Empty Description and user-facing-change sections, each with questions that prompt the human.
 6. A checklist: target branch is `rolling`, one feature per PR, documentation updated, "Allow edits by maintainers" selected.
 
-The human writes the description and submits.
-G3 blocks the agent from submitting, and G4 checks the finished body.
+The human writes the description and confirms the submission.
+G3 holds the submit command until the human confirms it, and G4 checks the finished body.
 While the packet is a draft, the hook runs G4 in draft mode: the sections the human writes may still be empty and are reported as warnings, so the gate does not push the agent into writing them.
 The disclosure section is required even in a draft, and `check-pr-body` without `--draft` requires everything.
 
@@ -393,6 +408,7 @@ The disclosure section is required even in a draft, and `check-pr-body` without 
 `issue-report` first decides where the issue belongs, then searches the `ros2` and `ament` organizations for duplicates.
 It collects the environment fields of the bug report template mechanically: operating system, ROS version or commit, RMW implementation, client library, and `ros2 doctor --report` output.
 The human writes the title, the reproduction steps, and the expected and actual behavior.
+The issue is filed only after the human confirms the command.
 The "Generated by Generative AI" field is filled in whenever an agent helped prepare the issue.
 
 ### 8.4 Sign-off and disclosure
@@ -493,6 +509,7 @@ The skill reuses the previous command from the conversation, applies the delta, 
 | Hook file | `hooks/hooks.json`, always merged with any manifest-declared file | `hooks/hooks.json` | `hooks/hooks.json`, fixed, no manifest override |
 | Tool hook event | `PreToolUse`, matcher `Bash` | `PreToolUse`, matcher `Bash` | `BeforeTool`, matcher `run_shell_command` |
 | Block signal | Exit code 2 with the reason on stderr, or JSON decision | Exit code 2 or JSON decision | Exit code 2 or JSON decision |
+| Confirmation prompt from a hook | `permissionDecision: "ask"` shows the permission prompt with the reason; not documented for bypass-permissions mode | `ask` is in the schema but unsupported, and the command runs | `decision: "ask"` exists in the source but not in the documentation |
 | Hook caveats | None known | User must review and trust; re-review when a script changes; plugins with hooks are excluded from the public directory | Enablement setting to be checked; the product was renamed Antigravity CLI in June 2026 |
 | Plugin root variable | `CLAUDE_PLUGIN_ROOT` | `PLUGIN_ROOT`, plus `CLAUDE_PLUGIN_ROOT` for compatibility | `${extensionPath}` in `hooks.json` |
 | Subagents | `agents/*.md` | To be checked | `agents/*.md`, preview |
@@ -677,6 +694,7 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 - Gates never rewrite history or files silently; fixes are explicit commands.
 - Issue and PR text fetched from GitHub is untrusted input, and skills tell the agent to treat it as data, not instructions.
 - Package detection reads PR head content from contributor forks; it extracts only package names, feeds them into a command the user reviews, and never treats file contents as instructions.
+- Submitting to GitHub is confirmed by the human through the harness's permission prompt, and a harness that cannot prompt gets a block instead, so a missing prompt never turns into an unconfirmed post.
 - Launching CI is privileged: the exact command is shown and confirmed every time, badges are opt-in, and a standing approval never crosses a session boundary.
 - The kit stores no credentials; tokens and ci.ros2.org access are ambient, the README lists the minimum token scopes, and skills must not echo or persist a token.
 - Releases are tagged and signed, and Codex users re-review hooks on each update by design.
@@ -699,7 +717,7 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | --- | --- |
 | Harness plugin formats change | Thin adapters, per-harness smoke tests, the generated-layout fallback |
 | Upstream policy changes | Source watch job and the 14-day target |
-| The kit is read as endorsing low-effort AI contributions | Gates default to blocking; the agent cannot post; the README states the policy first |
+| The kit is read as endorsing low-effort AI contributions | Gates default to blocking; the agent submits only what the human confirmed and never posts a reply; the README states the policy first |
 | Contributors disable hooks | Tier C in CI is independent of the contributor's tool |
 | Scope creep into ecosystem stacks | Out of scope for the core; satellite packs deferred |
 | Gemini CLI was renamed Antigravity CLI in June 2026 and its extension format may move | Gemini packaging is generated from canonical sources, so only the generator changes; verified at M1 |
@@ -740,12 +758,16 @@ Skill evaluations cost model usage, so they run per release, not per PR.
 | 2026-11-23 | The application skill check is a package-creation smoke test per distribution, because it exercises the exact commands the skills give and needs no model call. |
 | 2026-11-23 | Maintainer skills that read Jenkins use its public JSON API through `curl`, read-only, and never post; re-runs go through `ci-trigger` with confirmation. |
 | 2026-11-23 | The source watch stores a tree SHA for repositories and a text hash for pages, and updates an existing `source-watch` issue instead of opening a new one each week. |
+| 2026-11-28 | G3 is a confirmation gate for submissions: under `osra-ros2` the agent may create or change a pull request or an issue once the human confirms the exact command, and comments and reviews stay blocked. The OSRF policy forbids an agent writing the description and taking part in a discussion, and it does not say who runs the submit command. |
+| 2026-11-28 | Confirmation uses the harness's own permission prompt where a hook can request one, which is Claude Code only. Elsewhere G3 blocks and the human runs the command, because Codex accepts `ask` and then runs the command, and Gemini CLI does not document it. |
+| 2026-11-28 | The single `agent_may_post` flag is replaced by `agent_submission` and `agent_discussion`, each `allow`, `confirm`, or `deny`; the old flag is still read, and an unknown value means `deny`. |
 
 ### 16.2 Open
 
 No design questions are open.
 The hook-file question of section 9.3 was settled in M0.
-Three items await a real-world run that only the owner can do: the generated Gemini branch and the Jenkins credential handling of section 8.6 (M1 exit criteria), the first `claude plugin eval` run of `evals/`, and the first pass of the distribution matrix on GitHub.
+Four items await a real-world run that only the owner can do: the generated Gemini branch and the Jenkins credential handling of section 8.6 (M1 exit criteria), the first `claude plugin eval` run of `evals/`, the first pass of the distribution matrix on GitHub, and the G3 confirmation prompt in a live Claude Code session.
+Whether a hook's `ask` decision still prompts in Claude Code's bypass-permissions mode is not documented, so G3 blocks there until it is.
 The ownership review of M4 is recorded in section 16.1 when the owner decides.
 How the installed `ros-ci-for-pr` authenticates to Jenkins, and whether that works inside an agent session, is confirmed in M1 before `ci-trigger` ships.
 

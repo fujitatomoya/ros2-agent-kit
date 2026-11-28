@@ -29,7 +29,9 @@ ADAPTER = helpers.GATE_DIR.parent / 'adapters' / 'claude_codex_hook.py'
 
 def run_hook(payload: dict, env=None):
     merged = dict(os.environ)
-    merged.pop('ROS2_GATE_PROFILE', None)
+    # Start from a neutral harness: the tests may themselves run inside Claude Code or Codex.
+    for name in ('ROS2_GATE_PROFILE', 'CLAUDE_PROJECT_DIR', 'PLUGIN_ROOT'):
+        merged.pop(name, None)
     if env:
         merged.update(env)
     proc = subprocess.run([sys.executable, str(ADAPTER)], input=json.dumps(payload),
@@ -57,12 +59,44 @@ class Adapter(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn('profile osra-ros2', out)
 
-    def test_pre_tool_use_blocks_gh_pr_create(self):
-        p = payload('PreToolUse', self.repo, tool_name='Bash',
-                    tool_input={'command': 'gh pr create --fill'}, tool_use_id='t1')
-        code, out, err = run_hook(p)
+    def gh(self, command, **extra):
+        return payload('PreToolUse', self.repo, tool_name='Bash',
+                       tool_input={'command': command}, tool_use_id='t1', **extra)
+
+    def test_pre_tool_use_asks_before_gh_pr_create_in_claude_code(self):
+        code, out, err = run_hook(self.gh('gh pr create --fill'),
+                                  env={'CLAUDE_PROJECT_DIR': self.repo})
+        self.assertEqual(code, 0, err)
+        decision = json.loads(out)['hookSpecificOutput']
+        self.assertEqual(decision['hookEventName'], 'PreToolUse')
+        self.assertEqual(decision['permissionDecision'], 'ask')
+        self.assertIn('G3', decision['permissionDecisionReason'])
+        self.assertIn('confirm', decision['permissionDecisionReason'])
+
+    def test_pre_tool_use_blocks_gh_pr_create_where_no_prompt_is_possible(self):
+        cases = {
+            'unknown harness': (self.gh('gh pr create --fill'), None),
+            'codex payload': (self.gh('gh pr create --fill', turn_id='turn-1'),
+                              {'CLAUDE_PROJECT_DIR': self.repo}),
+            'codex environment': (self.gh('gh pr create --fill'),
+                                  {'CLAUDE_PROJECT_DIR': self.repo, 'PLUGIN_ROOT': '/x'}),
+            'bypass mode': (self.gh('gh pr create --fill', permission_mode='bypassPermissions'),
+                            {'CLAUDE_PROJECT_DIR': self.repo}),
+        }
+        for name, (p, env) in cases.items():
+            code, out, err = run_hook(p, env=env)
+            self.assertEqual(code, 2, name)
+            self.assertEqual(out.strip(), '', name)
+            self.assertIn('G3', err, name)
+            self.assertIn('let them run it', err, name)
+
+    def test_pre_tool_use_blocks_comments_even_in_claude_code(self):
+        code, out, err = run_hook(self.gh('gh pr comment 1 -b done'),
+                                  env={'CLAUDE_PROJECT_DIR': self.repo})
         self.assertEqual(code, 2)
+        self.assertEqual(out.strip(), '')
         self.assertIn('G3', err)
+        self.assertIn('blocked', err)
 
     def test_pre_tool_use_blocks_unsigned_commit(self):
         p = payload('PreToolUse', self.repo, tool_name='Bash',

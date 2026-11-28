@@ -8,8 +8,9 @@ The design lives in `design/ros2-agent-kit-design.md` and is the source of truth
 - Commits are authored and signed off by the human contributor (`git commit -s`).
   Never commit under an agent identity, and never add a `Signed-off-by` line for an agent.
 - Add `Assisted-by: {agent}:{model}` as a commit trailer when you helped with a commit.
-- Do not open pull requests, issues, or comments on GitHub.
-  Prepare the text in a local file and let the human submit it.
+- Open or change a pull request or an issue on GitHub only after the human confirms the exact command.
+  The human writes the description, so prepare the text in a local file for them first.
+- Never post comments or reviews on GitHub; replies are the human's to write and post.
 - Only report a test result that you actually ran on the current tree.
 - The gate engine in `gate/` is standard-library Python only, supports Python 3.10 and newer, and makes no network calls.
   Network helpers belong in `tools/`.

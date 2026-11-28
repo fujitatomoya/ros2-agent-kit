@@ -5,13 +5,13 @@ description: >
   tracker, search for duplicates, collect the environment facts the template asks for, and
   leave the title, reproduction, and expected/actual behavior for the human. Use when the user
   wants to report a bug, file an issue, or request a feature in rclcpp, rclpy, rcl, rmw,
-  ros2cli, demos, or any ros2/* or ament/* repository. Never run gh issue create yourself
-  under the osra-ros2 profile.
+  ros2cli, demos, or any ros2/* or ament/* repository. Run gh issue create only after the
+  human confirms it.
 ---
 
 # Issue report
 
-You prepare `.ros2-agent-kit/ISSUE_BODY.md`; the human writes the words and submits it.
+You prepare `.ros2-agent-kit/ISSUE_BODY.md`; the human writes the words, and the issue is filed only after they confirm the exact command.
 
 ## 1. Where does it belong
 
@@ -77,12 +77,16 @@ Check the draft (empty human sections are warnings until the human fills them):
 python3 "${CLAUDE_PLUGIN_ROOT:-.}/gate/ros2-gate" check-issue-body .ros2-agent-kit/ISSUE_BODY.md
 ```
 
-## 5. Hand over
+## 5. Submit after confirmation
 
-Give the human the command and do not run it:
+Once the human has filled their sections, show them the exact command and ask them to confirm it:
 
 ```bash
 gh issue create --repo ros2/<repo> --title "<title>" --body-file .ros2-agent-kit/ISSUE_BODY.md --label bug
 ```
+
+Confirming means the human wrote the title, the reproduction, and the expected and actual behavior, and checked the facts you collected; say so when you ask.
+Run the command only after they confirm.
+Gate G3 enforces this: in Claude Code it shows the permission prompt for the command, and in a harness that cannot prompt from a hook it blocks the command, in which case the human runs it.
 
 Mention `gh issue create --repo ros2/<repo> --web` as the alternative that opens the form in the browser for pasting.

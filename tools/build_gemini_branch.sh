@@ -30,7 +30,7 @@ if [ -e "$out" ] && [ ! -f "$out/GENERATED.md" ]; then
 fi
 rm -rf "$out"
 mkdir -p "$out/hooks"
-for d in skills gate adapters policy tools templates agents; do
+for d in skills gate adapters policy tools templates agents assets; do
   [ -d "$root/$d" ] && cp -R "$root/$d" "$out/$d"
 done
 rm -rf "$out/gate/tests" "$out/tools/tests"

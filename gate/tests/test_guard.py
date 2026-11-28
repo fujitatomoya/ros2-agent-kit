@@ -15,7 +15,7 @@
 import unittest
 
 from tests import helpers
-from ros2_gate import guard
+from ros2_gate import guard, profile as profile_mod
 
 OSRA = helpers.load_profile('osra-ros2')
 APP = helpers.load_profile('app')
@@ -44,26 +44,68 @@ class GhPosting(unittest.TestCase):
                     'gh pr checkout 7', 'gh api repos/ros2/rclcpp/pulls/1', 'gh auth status'):
             self.assertTrue(self.check(cmd).allowed, cmd)
 
-    def test_mutating_gh_blocked(self):
-        for cmd in ('gh pr create --title x', 'gh pr comment 1 -b hi', 'gh pr review 1 --approve',
-                    'gh issue create', 'gh issue comment 2 -b x', 'gh pr edit 1 --body y',
-                    'gh pr merge 1', 'gh api -X POST repos/o/r/issues/1/comments -f body=hi',
-                    'gh api repos/o/r/issues -f title=x', 'gh api graphql -f query="mutation { x }"'):
+    def test_submission_needs_confirmation(self):
+        for cmd in ('gh pr create --title x', 'gh issue create', 'gh pr edit 1 --body y',
+                    'gh pr merge 1', 'gh pr close 1', 'gh issue close 3',
+                    'gh api repos/o/r/issues -f title=x',
+                    'gh api graphql -f query="mutation { x }"'):
             d = self.check(cmd)
+            self.assertEqual(d.decision, guard.ASK, cmd)
+            self.assertTrue(d.needs_confirmation, cmd)
             self.assertFalse(d.allowed, cmd)
+            self.assertEqual(d.gate, 'G3', cmd)
+            self.assertIn('confirm', d.reason, cmd)
+
+    def test_discussion_blocked(self):
+        for cmd in ('gh pr comment 1 -b hi', 'gh pr review 1 --approve',
+                    'gh issue comment 2 -b x', 'gh pr close 1 --comment done',
+                    'gh issue close 2 -c bye', 'gh issue reopen 2 --comment=again',
+                    'gh api -X POST repos/o/r/issues/1/comments -f body=hi',
+                    'gh api -X POST repos/o/r/pulls/1/reviews -f event=APPROVE',
+                    'gh api graphql -f query="mutation { addComment(input: {}) { id } }"'):
+            d = self.check(cmd)
+            self.assertEqual(d.decision, guard.BLOCK, cmd)
+            self.assertFalse(d.needs_confirmation, cmd)
             self.assertEqual(d.gate, 'G3', cmd)
 
     def test_nested_shell_is_inspected(self):
-        self.assertFalse(self.check('bash -c "gh issue create -t x"').allowed)
+        d = self.check('bash -c "gh issue create -t x"')
+        self.assertTrue(d.needs_confirmation)
+        self.assertEqual(d.command, 'gh issue create -t x')
+        self.assertEqual(self.check('sh -c "gh pr comment 1 -b x"').decision, guard.BLOCK)
 
     def test_compound_command_blocked_on_any_segment(self):
         d = self.check('colcon build && gh pr comment 1 -b done')
         self.assertFalse(d.allowed)
         self.assertEqual(d.command, 'gh pr comment 1 -b done')
 
+    def test_block_wins_over_confirmation(self):
+        d = self.check('gh pr create --fill && gh pr comment 1 -b done')
+        self.assertEqual(d.decision, guard.BLOCK)
+        self.assertEqual(d.command, 'gh pr comment 1 -b done')
+        d = self.check('gh pr create --fill && git status')
+        self.assertTrue(d.needs_confirmation)
+        self.assertEqual(d.command, 'gh pr create --fill')
+
     def test_app_profile_allows_posting(self):
-        self.assertTrue(self.check('gh pr create', APP).allowed)
-        self.assertTrue(self.check('gh pr create', DCO).allowed)
+        for cmd in ('gh pr create', 'gh pr comment 1 -b hi'):
+            self.assertTrue(self.check(cmd, APP).allowed, cmd)
+            self.assertTrue(self.check(cmd, DCO).allowed, cmd)
+
+    def test_profile_modes(self):
+        def prof(**authorship):
+            return profile_mod.Profile('custom', {'rules': {'authorship': authorship}})
+        deny = prof(agent_submission='deny', agent_discussion='deny')
+        self.assertEqual(self.check('gh pr create', deny).decision, guard.BLOCK)
+        both = prof(agent_submission='confirm', agent_discussion='confirm')
+        self.assertTrue(self.check('gh pr comment 1 -b hi', both).needs_confirmation)
+        # A profile from before the split, and a misspelled value, both fail closed.
+        legacy = prof(agent_may_post=False)
+        self.assertEqual(self.check('gh pr create', legacy).decision, guard.BLOCK)
+        self.assertEqual(self.check('gh pr comment 1 -b hi', legacy).decision, guard.BLOCK)
+        self.assertTrue(self.check('gh pr create', prof(agent_may_post=True)).allowed)
+        typo = prof(agent_submission='confrim')
+        self.assertEqual(self.check('gh pr create', typo).decision, guard.BLOCK)
 
 
 class GitCommit(unittest.TestCase):

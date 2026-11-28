@@ -1,3 +1,5 @@
+<img src="assets/icon.svg" alt="ros2-agent-kit icon" width="96" align="right">
+
 # ros2-agent-kit
 
 `ros2-agent-kit` is a set of agent skills, hooks, and checks dedicated to ROS 2 development.
@@ -10,6 +12,16 @@ It encodes the DCO sign-off, the OSRF generative-tools policy, and the upstream 
 This is a personal project of a ROS 2 maintainer.
 It is not an official ROS project.
 The full design, including the roadmap, is in [design/ros2-agent-kit-design.md](design/ros2-agent-kit-design.md).
+
+## Why this exists
+
+- **Common, consistent skills:** one shared set of agent skills helps developers and users make ROS 2 better.
+- **Maintained by people who know the core:** scattered skill packs are not well maintained, so these skills are kept by a maintainer of the ROS 2 core.
+- **No reinventing the wheel:** nobody has to write the same ROS 2 skills and rules again and again.
+- **AI guidelines built in:** the ROS guidelines for AI-assisted contributions are implemented in the skills and plugins.
+- **More useful tools:** developers and maintainers get more tools for their everyday ROS 2 work.
+
+The slides in [presentation/overview.md](presentation/overview.md) explain the same points with diagrams.
 
 ## What is in the box
 
@@ -29,11 +41,16 @@ The full design, including the roadmap, is in [design/ros2-agent-kit-design.md](
 | --- | --- | --- | --- |
 | G1 | The agent runs `git commit` | The author is the human contributor, not an agent identity; the DCO sign-off is present; hooks are not bypassed | Block |
 | G2 | The agent runs `git push` | Every commit since the merge base passes G1, and the evidence ledger holds a successful build and test for the current tree | Block |
-| G3 | The agent runs `gh pr create`, `gh issue create`, any `gh` comment, review, edit, or merge command, or a mutating `gh api` call | Not allowed under a profile where the human submits | Block, with instructions for the human |
+| G3 | The agent runs `gh pr create`, `gh issue create`, any `gh` comment, review, edit, or merge command, or a mutating `gh api` call | Creating or changing a pull request or an issue runs only after you confirm the exact command; comments and reviews are not allowed for the agent | Confirm, or block for comments and reviews |
 | G4 | The agent writes `PR_BODY.md` or `ISSUE_BODY.md` | Every template section is present, the generative-AI disclosure is filled in, no placeholder is left; sections the human writes may stay empty in a draft | Block |
 | G5 | Session start | The active profile and ROS distribution are printed | Inform |
 | G6 | The agent edits a C++, Python, CMake, XML, or documentation file | The ament linter for that file type when installed, otherwise 100 columns, tabs, one sentence per line | Advise |
 | G7 | The agent ends its turn | A claim such as "all tests pass" without a matching successful entry in the evidence ledger | Advise |
+
+G3 follows the OSRF policy: you write the description and the replies, and you stay responsible for what is submitted.
+It confirms through the harness's own permission prompt, which today only Claude Code can show from a hook.
+In Codex, Gemini CLI, and Claude Code's bypass-permissions mode it blocks the command and gives it to you to run, so nothing is submitted unconfirmed.
+The table shows the `osra-ros2` profile; under `app` and `generic-dco` the agent may post.
 
 ## Evidence ledger
 
@@ -113,12 +130,12 @@ python3 gate/ros2-gate check-commit HEAD            # sign-off, identity, Assist
 python3 gate/ros2-gate check-range                  # every commit since the merge base with rolling
 python3 gate/ros2-gate check-pr-body PR_BODY.md --issue 1234
 python3 gate/ros2-gate check-issue-body ISSUE_BODY.md --template bug_report
-python3 gate/ros2-gate guard -- gh pr create        # allow or block, with the reason
+python3 gate/ros2-gate guard -- gh pr create        # allow, block, or ask you to confirm, with the reason
 python3 gate/ros2-gate lint-file src/node.cpp       # fast advisory style check
 echo "all tests pass" | python3 gate/ros2-gate check-claims   # claims without evidence
 ```
 
-Exit codes: 0 pass, 1 fail, 2 usage or runtime error.
+Exit codes: 0 pass, 1 fail, 2 usage or runtime error, and 3 from `guard` when a command needs your confirmation.
 
 Templates are read from the target repository, never vendored.
 When a repository relies on its organization's default templates, cache them once:

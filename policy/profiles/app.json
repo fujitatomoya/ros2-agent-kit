@@ -24,7 +24,8 @@
       "pr_description": "any",
       "issue_body": "any",
       "discussion_replies": "any",
-      "agent_may_post": true
+      "agent_submission": "allow",
+      "agent_discussion": "allow"
     },
     "hooks": {
       "allow_bypass": false

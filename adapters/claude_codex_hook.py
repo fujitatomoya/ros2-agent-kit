@@ -17,11 +17,15 @@
 
 Reads the hook payload as JSON on stdin and translates it into ros2-gate calls.
 Block signal: exit code 2 with the reason on stderr, which both harnesses honor.
+Confirmation signal: the ``ask`` permission decision as JSON on stdout, which makes Claude Code
+show its permission prompt with the reason. Codex accepts ``ask`` in its schema but runs the
+command anyway, so there, and wherever a prompt is not documented to appear, a command that
+needs confirmation is blocked and the human runs it.
 Context: plain text on stdout for SessionStart.
 
 Events handled:
   SessionStart          -> G5, print the active profile in one line
-  PreToolUse  (Bash)    -> G1 and G3, guard the command
+  PreToolUse  (Bash)    -> G1, G2 and G3, guard the command
   PostToolUse (Write|Edit) -> G4, check PR_BODY.md / ISSUE_BODY.md after they are written;
                               G6, advisory style check on edited source files
   Stop                  -> G7, verification claims without evidence (advisory)
@@ -45,6 +49,8 @@ ISSUE_BODY_RE = re.compile(r'^(?:issue|bug|feature)[-_]?(?:request[-_]?)?body\.m
 TEMPLATE_HINT_RE = re.compile(r'<!--\s*ros2-gate:\s*template\s*=\s*([\w.-]+)\s*-->')
 
 ALLOW, BLOCK = 0, 2
+# Permission modes in which Claude Code is not documented to prompt for a hook's ask decision.
+NO_PROMPT_MODES = ('bypassPermissions', 'dontAsk')
 
 
 def _read_payload() -> dict:
@@ -63,10 +69,25 @@ def on_session_start(payload: dict, prof) -> int:
     if distro:
         line += f'; ROS_DISTRO={distro}'
     line += ('. Contribution rules are enforced by ros2-gate hooks: commits need the human '
-             "contributor's sign-off, and the agent does not post PRs, issues, or comments "
-             'under a profile that forbids it.')
+             "contributor's sign-off, and where the profile says so the agent submits a pull "
+             'request or an issue only after the human confirms the exact command, and does '
+             'not post comments or reviews.')
     print(line)
     return ALLOW
+
+
+def can_ask(payload: dict) -> bool:
+    """True when this is Claude Code in a mode where a hook's ask decision prompts the human.
+
+    Codex sets ``PLUGIN_ROOT`` and sends ``turn_id``; it parses ``ask`` and then runs the
+    command, so it must never receive one. Anything that is not positively Claude Code is
+    treated the same way.
+    """
+    if os.environ.get('PLUGIN_ROOT') or 'turn_id' in payload:
+        return False
+    if not os.environ.get('CLAUDE_PROJECT_DIR'):
+        return False
+    return payload.get('permission_mode') not in NO_PROMPT_MODES
 
 
 def on_pre_tool_use(payload: dict, prof, identities, cwd) -> int:
@@ -76,6 +97,18 @@ def on_pre_tool_use(payload: dict, prof, identities, cwd) -> int:
     decision = guard.guard(command, prof, identities, cwd)
     if decision.allowed:
         return ALLOW
+    if decision.needs_confirmation:
+        if can_ask(payload):
+            print(json.dumps({'hookSpecificOutput': {
+                'hookEventName': 'PreToolUse',
+                'permissionDecision': 'ask',
+                'permissionDecisionReason': f'ros2-gate {decision.gate}: {decision.reason}.'}}))
+            return ALLOW
+        print(f'ros2-gate {decision.gate} needs the human to confirm `{decision.command}`: '
+              f'{decision.reason}. This harness or permission mode cannot show a confirmation '
+              'prompt from a hook, so show the human the exact command and let them run it.',
+              file=sys.stderr)
+        return BLOCK
     print(f'ros2-gate {decision.gate} blocked `{decision.command}`: {decision.reason}',
           file=sys.stderr)
     return BLOCK

@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Command-line entry point. Exit codes: 0 pass or allow, 1 fail or block, 2 usage or runtime error."""
+"""Command-line entry point.
+
+Exit codes: 0 pass or allow, 1 fail or block, 2 usage or runtime error, and 3 when ``guard``
+finds a command that the human must confirm first.
+"""
 
 from __future__ import annotations
 
@@ -28,7 +32,7 @@ from . import (__version__, body, claims as claims_mod, commit, doctor as doctor
                gitinfo, guard, lint, profile as profile_mod)
 from .findings import Report
 
-PASS, FAIL, USAGE = 0, 1, 2
+PASS, FAIL, USAGE, CONFIRM = 0, 1, 2, 3
 
 _BODY_TEMPLATE_HINT_RE = re.compile(r'<!--\s*ros2-gate:\s*template\s*=\s*([\w.-]+)\s*-->')
 
@@ -199,8 +203,10 @@ def cmd_guard(args, prof, cwd, identities) -> int:
     elif decision.allowed:
         print('allow')
     else:
-        print(f'block ({decision.gate}): {decision.reason}')
-    return PASS if decision.allowed else FAIL
+        print(f'{decision.decision} ({decision.gate}): {decision.reason}')
+    if decision.allowed:
+        return PASS
+    return CONFIRM if decision.needs_confirmation else FAIL
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -252,7 +258,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser('install-hooks', help='install tier C git hooks (commit-msg, pre-push)')
     sp.add_argument('--force', action='store_true', help='replace existing foreign hooks')
 
-    sp = sub.add_parser('guard', help='decide whether a shell command is allowed (G1, G3)')
+    sp = sub.add_parser('guard', help='decide whether a shell command is allowed, blocked, or '
+                                      'needs the human to confirm it (G1, G2, G3)')
     sp.add_argument('command', nargs=argparse.REMAINDER, help='the command, after --')
     return p
 

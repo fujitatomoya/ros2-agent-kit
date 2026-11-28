@@ -71,7 +71,11 @@ class Detection(unittest.TestCase):
         self.assertTrue(prof.rule('dco.required'))
         self.assertEqual(prof.rule('branching.target'), 'rolling')
         self.assertIsNone(prof.rule('does.not.exist'))
-        self.assertIn('agent may not post', prof.summary())
+        self.assertIn('only after the human confirms', prof.summary())
+        self.assertIn('agent may not post comments or reviews', prof.summary())
+        self.assertEqual(prof.posting('submission'), 'confirm')
+        self.assertEqual(prof.posting('discussion'), 'deny')
+        self.assertIn('agent may post', helpers.load_profile('app').summary())
 
 
 if __name__ == '__main__':

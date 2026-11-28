@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" width="1100" height="440" role="img" aria-labelledby="t d" font-family="'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" fill="#1f2933" text-anchor="middle">
+<title id="t">What happens when a gate blocks</title>
+<desc id="d">Sequence: you ask for a commit, the agent tries git commit, the hook adapter passes the command to ros2-gate, which reads the profile, blocks with gate G1, and the agent retries with a sign-off and is allowed.</desc>
+<defs><marker id="m0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/></marker><marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker></defs>
+<rect width="1100" height="440" fill="#ffffff"/>
+<rect x="15" y="14" width="170" height="40" rx="8" fill="#f1f3f5" stroke="#7b8794" stroke-width="1.5"/>
+<text x="100" y="39.2" font-size="15" font-weight="700">You</text>
+<line x1="100" y1="54" x2="100" y2="428" stroke="#7b8794" stroke-width="1.2" stroke-dasharray="4 5"/>
+<rect x="245" y="14" width="170" height="40" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+<text x="330" y="39.2" font-size="15" font-weight="700">Agent</text>
+<line x1="330" y1="54" x2="330" y2="428" stroke="#7b8794" stroke-width="1.2" stroke-dasharray="4 5"/>
+<rect x="475" y="14" width="170" height="40" rx="8" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="560" y="39.2" font-size="15" font-weight="700">Hook adapter</text>
+<line x1="560" y1="54" x2="560" y2="428" stroke="#7b8794" stroke-width="1.2" stroke-dasharray="4 5"/>
+<rect x="705" y="14" width="170" height="40" rx="8" fill="#ede7f6" stroke="#5e35b1" stroke-width="1.5"/>
+<text x="790" y="39.2" font-size="15" font-weight="700">ros2-gate</text>
+<line x1="790" y1="54" x2="790" y2="428" stroke="#7b8794" stroke-width="1.2" stroke-dasharray="4 5"/>
+<rect x="915" y="14" width="170" height="40" rx="8" fill="#fff4e0" stroke="#b26a00" stroke-width="1.5"/>
+<text x="1000" y="39.2" font-size="15" font-weight="700">Policy profile</text>
+<line x1="1000" y1="54" x2="1000" y2="428" stroke="#7b8794" stroke-width="1.2" stroke-dasharray="4 5"/>
+<path d="M100,96 L330,96" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="215" y="87" font-size="13">&quot;commit this fix&quot;</text>
+<circle cx="82" cy="96" r="11" fill="#1f2933"/>
+<text x="82" y="100.5" font-size="12" fill="#ffffff" font-weight="700">1</text>
+<path d="M330,144 L560,144" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="445" y="135" font-size="13">hook fires before: git commit -m ...</text>
+<circle cx="312" cy="144" r="11" fill="#1f2933"/>
+<text x="312" y="148.5" font-size="12" fill="#ffffff" font-weight="700">2</text>
+<path d="M560,192 L790,192" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="675" y="183" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">guard(command, profile)</text>
+<circle cx="542" cy="192" r="11" fill="#1f2933"/>
+<text x="542" y="196.5" font-size="12" fill="#ffffff" font-weight="700">3</text>
+<path d="M790,240 L1000,240" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="895" y="231" font-size="13">dco.required? true</text>
+<circle cx="772" cy="240" r="11" fill="#1f2933"/>
+<text x="772" y="244.5" font-size="12" fill="#ffffff" font-weight="700">4</text>
+<path d="M790,292 L560,292" fill="none" stroke="#c62828" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#m1)"/>
+<text x="675" y="283" font-size="13" fill="#c62828" font-weight="700">block, G1: sign-off required</text>
+<circle cx="808" cy="292" r="11" fill="#1f2933"/>
+<text x="808" y="296.5" font-size="12" fill="#ffffff" font-weight="700">5</text>
+<path d="M560,340 L330,340" fill="none" stroke="#c62828" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#m1)"/>
+<text x="445" y="331" font-size="13" fill="#c62828" font-weight="700">exit 2 + reason; commit never ran</text>
+<circle cx="578" cy="340" r="11" fill="#1f2933"/>
+<text x="578" y="344.5" font-size="12" fill="#ffffff" font-weight="700">6</text>
+<path d="M330,400 L790,400" fill="none" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#m2)"/>
+<text x="560" y="391" font-size="13" fill="#2e7d32" font-weight="700">retry with git commit -s: allowed, the commit runs</text>
+<circle cx="312" cy="400" r="11" fill="#1f2933"/>
+<text x="312" y="404.5" font-size="12" fill="#ffffff" font-weight="700">7</text>
+</svg>

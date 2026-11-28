@@ -37,7 +37,7 @@ Flag comments that are questions rather than change requests; those need the hum
 
 For each thread, give the human a one-line note of what was done, with the commit hash, so they can write their reply and resolve the thread.
 Do not write the reply text, not even as a suggestion.
-Do not resolve threads, request re-review, or comment; `gh pr review`, `gh pr comment`, and the `gh api` write calls are blocked under this profile.
+Do not resolve threads, request re-review, or comment; `gh pr review`, `gh pr comment`, and `gh api` calls that write comments or reviews are blocked under this profile, even with the human's confirmation.
 
 The push is the human's go-ahead: show `git push` and run it when they confirm; G2 checks the commits and the evidence first.
 

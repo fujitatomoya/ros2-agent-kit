@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" width="1100" height="440" role="img" aria-labelledby="t d" font-family="'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" fill="#1f2933" text-anchor="middle">
+<title id="t">The evidence ledger</title>
+<desc id="d">ros2-gate run records each check with its exit code and a hash of the working tree. Gate G2, gate G7 and the PR packet read those entries. Editing a file changes the tree hash, so old evidence stops counting.</desc>
+<defs><marker id="m0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/></marker><marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b26a00"/></marker><marker id="m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker></defs>
+<rect width="1100" height="440" fill="#ffffff"/>
+<rect x="20" y="150" width="270" height="120" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+<text x="155" y="193.3" font-size="15.5" font-weight="700">The agent runs a check</text>
+<text x="155" y="204.9" font-size="6" fill="#52606d"></text>
+<text x="155" y="220.4" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">ros2-gate run --</text>
+<text x="155" y="238.4" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">colcon test ...</text>
+<path d="M290,210 L370,210" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="330" y="200" font-size="12.5" fill="#52606d">records</text>
+<rect x="370" y="40" width="310" height="320" rx="8" fill="#ede7f6" stroke="#5e35b1" stroke-width="2"/>
+<text x="525" y="72" font-size="13.5" font-weight="700" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">.ros2-agent-kit/evidence.jsonl</text>
+<text x="525" y="93" font-size="12.5" fill="#52606d">one line per run, kept out of git</text>
+<rect x="390" y="110" width="270" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="525" y="129.7" font-size="13.5">command</text>
+<rect x="390" y="150" width="270" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="525" y="169.7" font-size="13.5">exit code</text>
+<rect x="390" y="190" width="270" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="525" y="209.7" font-size="13.5">timestamp</text>
+<rect x="390" y="230" width="270" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="525" y="249.7" font-size="13.5">HEAD commit</text>
+<rect x="390" y="270" width="270" height="30" rx="6" fill="#fff4e0" stroke="#b26a00" stroke-width="1.5"/>
+<text x="525" y="289.7" font-size="13.5" font-weight="700">working-tree hash</text>
+<rect x="390" y="310" width="270" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="525" y="329.7" font-size="13.5">kind: build, test, or lint</text>
+<rect x="770" y="60" width="310" height="84" rx="8" fill="#fdecea" stroke="#c62828" stroke-width="1.5"/>
+<text x="925" y="89.3" font-size="15" font-weight="700">Gate G2 · git push</text>
+<text x="925" y="107.9" font-size="13">blocked without a passing build</text>
+<text x="925" y="125.9" font-size="13">and test for the current tree</text>
+<path d="M725,102 L770,102" fill="none" stroke="#c62828" stroke-width="1.8" marker-end="url(#m1)"/>
+<rect x="770" y="160" width="310" height="84" rx="8" fill="#fff4e0" stroke="#b26a00" stroke-width="1.5"/>
+<text x="925" y="189.3" font-size="15" font-weight="700">Gate G7 · end of turn</text>
+<text x="925" y="207.9" font-size="13">&quot;all tests pass&quot; needs</text>
+<text x="925" y="225.9" font-size="13">a matching entry</text>
+<path d="M725,202 L770,202" fill="none" stroke="#b26a00" stroke-width="1.8" marker-end="url(#m2)"/>
+<rect x="770" y="260" width="310" height="84" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="925" y="289.3" font-size="15" font-weight="700">PR packet</text>
+<text x="925" y="307.9" font-size="13">&quot;Verification performed&quot; lists</text>
+<text x="925" y="325.9" font-size="13">these entries as facts</text>
+<path d="M725,302 L770,302" fill="none" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#m3)"/>
+<path d="M680,202 L725,202 M725,102 L725,302" fill="none" stroke="#7b8794" stroke-width="1.8"/>
+<rect x="20" y="384" width="1060" height="40" rx="8" fill="#f1f3f5" stroke="#7b8794" stroke-width="1.5"/>
+<text x="550" y="408.9" font-size="14">Edit any file and the tree hash changes, so earlier evidence stops counting until the check is run again.</text>
+</svg>

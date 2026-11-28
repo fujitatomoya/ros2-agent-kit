@@ -13,7 +13,7 @@ description: >
 
 Everything here is read-only.
 The output is context for the maintainer's own words; labels, comments, assignments, and merges are theirs.
-`gh issue edit`, `gh pr review`, `gh pr merge`, and the `gh api` write calls are blocked under this profile for that reason.
+Under this profile `gh pr review` and comments are blocked, and `gh issue edit`, `gh pr merge`, and other writes need the maintainer's confirmation; this skill uses none of them.
 
 ## Gather
 

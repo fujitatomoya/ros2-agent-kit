@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 460" width="1100" height="460" role="img" aria-labelledby="t d" font-family="'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" fill="#1f2933" text-anchor="middle">
+<title id="t">Architecture</title>
+<desc id="d">Agent harness hooks pass through thin adapters, and git hooks and the GitHub Action call directly, into one check engine named ros2-gate, which reads its rules from JSON policy files. Skills, context files and subagents form the knowledge tier.</desc>
+<defs><marker id="m0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/></marker></defs>
+<rect width="1100" height="460" fill="#ffffff"/>
+<rect x="20" y="16" width="570" height="196" rx="8" fill="none" stroke="#1976d2" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="34" y="37" font-size="13" fill="#1976d2" text-anchor="start" font-weight="700">Tier B · agent hooks</text>
+<rect x="40" y="52" width="160" height="40" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+<text x="120" y="77.2" font-size="15" font-weight="700">Claude Code</text>
+<rect x="40" y="104" width="160" height="40" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+<text x="120" y="129.2" font-size="15" font-weight="700">Codex</text>
+<rect x="40" y="156" width="160" height="40" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="1.5"/>
+<text x="120" y="181.2" font-size="15" font-weight="700">Gemini CLI</text>
+<text x="435" y="64" font-size="12.5" fill="#52606d">thin adapters translate formats</text>
+<rect x="300" y="76" width="270" height="44" rx="8" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="435" y="102.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">adapters/claude_codex_hook.py</text>
+<rect x="300" y="154" width="270" height="44" rx="8" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="435" y="180.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">adapters/gemini_hook.py</text>
+<path d="M200,72 L300,92" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<path d="M200,124 L300,104" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<path d="M200,176 L300,176" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<rect x="20" y="228" width="570" height="100" rx="8" fill="none" stroke="#b26a00" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="34" y="249" font-size="13" fill="#b26a00" text-anchor="start" font-weight="700">Tier C · repository gates, for any tool</text>
+<rect x="40" y="262" width="250" height="50" rx="8" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="165" y="283.8" font-size="14.5" font-weight="700">git hooks</text>
+<text x="165" y="301.2" font-size="12" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">.pre-commit-hooks.yaml</text>
+<rect x="320" y="262" width="250" height="50" rx="8" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="445" y="283.8" font-size="14.5" font-weight="700">GitHub Action</text>
+<text x="445" y="301.2" font-size="12" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">ci/action.yml</text>
+<rect x="660" y="50" width="200" height="278" rx="8" fill="#ede7f6" stroke="#5e35b1" stroke-width="2"/>
+<text x="760" y="86" font-size="21" font-weight="700" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">ros2-gate</text>
+<text x="760" y="108" font-size="13" fill="#52606d">one check engine</text>
+<rect x="670" y="126" width="80" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="710" y="145.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">guard</text>
+<rect x="762" y="126" width="80" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="802" y="145.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">commit</text>
+<rect x="670" y="166" width="80" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="710" y="185.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">body</text>
+<rect x="762" y="166" width="80" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="802" y="185.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">evidence</text>
+<rect x="670" y="206" width="80" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="710" y="225.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">claims</text>
+<rect x="762" y="206" width="80" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="802" y="225.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">lint</text>
+<text x="760" y="268" font-size="12.5" fill="#52606d">Python standard library</text>
+<text x="760" y="288" font-size="12.5" fill="#52606d">no network calls</text>
+<path d="M570,98 L660,120" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<path d="M570,176 L660,176" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<path d="M590,287 L660,287" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<rect x="920" y="50" width="165" height="278" rx="8" fill="#fff4e0" stroke="#b26a00" stroke-width="2"/>
+<text x="1002" y="86" font-size="19" font-weight="700" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">policy/</text>
+<text x="1002" y="108" font-size="13" fill="#52606d">rules as data (JSON)</text>
+<rect x="932" y="126" width="141" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="1002.5" y="145.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">osra-ros2</text>
+<rect x="932" y="166" width="141" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="1002.5" y="185.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">generic-dco</text>
+<rect x="932" y="206" width="141" height="30" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="1002.5" y="225.4" font-size="12.5" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">app</text>
+<text x="1002" y="268" font-size="12.5" fill="#52606d">agent identities</text>
+<text x="1002" y="288" font-size="12.5" fill="#52606d">upstream sources</text>
+<path d="M920,189 L860,189" fill="none" stroke="#7b8794" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="890" y="180" font-size="12" fill="#52606d">reads</text>
+<rect x="20" y="346" width="1065" height="98" rx="8" fill="none" stroke="#2e7d32" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="34" y="367" font-size="13" fill="#2e7d32" text-anchor="start" font-weight="700">Tier A · knowledge the agent reads</text>
+<rect x="40" y="380" width="300" height="50" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="190" y="401.4" font-size="14.5" font-weight="700">24 skills</text>
+<text x="190" y="419.4" font-size="12.5" fill="#52606d">how to pass the gates</text>
+<rect x="370" y="380" width="330" height="50" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="535" y="401.4" font-size="14.5" font-weight="700">AGENTS.md and GEMINI.md</text>
+<text x="535" y="419.4" font-size="12.5" fill="#52606d">always-on context</text>
+<rect x="730" y="380" width="335" height="50" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="897.5" y="401.4" font-size="14.5" font-weight="700">2 read-only subagents</text>
+<text x="897.5" y="419.4" font-size="12.5" fill="#52606d">branch audit, style review</text>
+</svg>

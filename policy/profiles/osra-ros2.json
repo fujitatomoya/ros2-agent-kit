@@ -27,7 +27,8 @@
       "pr_description": "human",
       "issue_body": "human",
       "discussion_replies": "human",
-      "agent_may_post": false
+      "agent_submission": "confirm",
+      "agent_discussion": "deny"
     },
     "hooks": {
       "allow_bypass": false

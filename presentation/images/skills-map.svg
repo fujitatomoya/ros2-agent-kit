@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" width="1100" height="440" role="img" aria-labelledby="t d" font-family="'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" fill="#1f2933" text-anchor="middle">
+<title id="t">The 24 skills in four groups</title>
+<desc id="d">Contribution: seven skills. Code rules: five. Application development: six. Maintainer: six.</desc>
+<defs></defs>
+<rect width="1100" height="440" fill="#ffffff"/>
+<rect x="20" y="16" width="255" height="408" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+<text x="147.5" y="48" font-size="17" fill="#1976d2" font-weight="700">Contribution</text>
+<text x="147.5" y="69" font-size="12.5" fill="#52606d">pass mainline review first time</text>
+<rect x="35" y="88" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="147.5" y="108" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">contribute-preflight</text>
+<rect x="35" y="128" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="147.5" y="148.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">commit</text>
+<rect x="35" y="168" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="147.5" y="188.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">pr-prepare</text>
+<rect x="35" y="208" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="147.5" y="228.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">issue-report</text>
+<rect x="35" y="248" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="147.5" y="268.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">review-respond</text>
+<rect x="35" y="288" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="147.5" y="308.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">backport</text>
+<rect x="35" y="328" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="147.5" y="348.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">api-abi-stability</text>
+<text x="147.5" y="408" font-size="12.5" fill="#52606d" font-weight="700">7 skills</text>
+<rect x="290" y="16" width="255" height="408" rx="8" fill="#ede7f6" stroke="#5e35b1" stroke-width="2"/>
+<text x="417.5" y="48" font-size="17" fill="#5e35b1" font-weight="700">Code rules</text>
+<text x="417.5" y="69" font-size="12.5" fill="#52606d">what the linters will decide</text>
+<rect x="305" y="88" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="417.5" y="108" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">cpp-style</text>
+<rect x="305" y="128" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="417.5" y="148.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">python-style</text>
+<rect x="305" y="168" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="417.5" y="188.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">cmake-style</text>
+<rect x="305" y="208" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="417.5" y="228.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">docs-style</text>
+<rect x="305" y="248" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="417.5" y="268.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">lint-and-test</text>
+<text x="417.5" y="408" font-size="12.5" fill="#52606d" font-weight="700">5 skills</text>
+<rect x="560" y="16" width="255" height="408" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="2"/>
+<text x="687.5" y="48" font-size="17" fill="#2e7d32" font-weight="700">Application development</text>
+<text x="687.5" y="69" font-size="12.5" fill="#52606d">build your own ROS 2 packages</text>
+<rect x="575" y="88" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="687.5" y="108" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">workspace-and-packages</text>
+<rect x="575" y="128" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="687.5" y="148.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">nodes-and-components</text>
+<rect x="575" y="168" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="687.5" y="188.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">executors-and-qos</text>
+<rect x="575" y="208" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="687.5" y="228.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">launch-and-interfaces</text>
+<rect x="575" y="248" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="687.5" y="268.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">testing</text>
+<rect x="575" y="288" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="687.5" y="308.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">introspection</text>
+<text x="687.5" y="408" font-size="12.5" fill="#52606d" font-weight="700">6 skills</text>
+<rect x="830" y="16" width="255" height="408" rx="8" fill="#fff4e0" stroke="#b26a00" stroke-width="2"/>
+<text x="957.5" y="48" font-size="17" fill="#b26a00" font-weight="700">Maintainer</text>
+<text x="957.5" y="69" font-size="12.5" fill="#52606d">recurring upkeep, with confirmation</text>
+<rect x="845" y="88" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="957.5" y="108" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">ci-trigger</text>
+<rect x="845" y="128" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="957.5" y="148.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">ci-status</text>
+<rect x="845" y="168" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="957.5" y="188.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">buildfarm-triage</text>
+<rect x="845" y="208" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="957.5" y="228.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">maintainer-triage</text>
+<rect x="845" y="248" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="957.5" y="268.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">rosdistro-release</text>
+<rect x="845" y="288" width="225" height="31" rx="6" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text x="957.5" y="308.1" font-size="13" font-family="'DejaVu Sans Mono', Menlo, Consolas, monospace">contribution-report</text>
+<text x="957.5" y="408" font-size="12.5" fill="#52606d" font-weight="700">6 skills</text>
+</svg>

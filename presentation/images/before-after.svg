@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" width="1100" height="440" role="img" aria-labelledby="t d" font-family="'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif" fill="#1f2933" text-anchor="middle">
+<title id="t">With and without the kit</title>
+<desc id="d">Two rows of four steps. Without the kit an agent commits under its own identity, writes the PR text, opens the PR, and the maintainer closes it. With the kit, gates G1, G4 and G3 correct each step and the PR reaches review.</desc>
+<defs><marker id="m0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker><marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker></defs>
+<rect width="1100" height="440" fill="#ffffff"/>
+<text x="25" y="30" font-size="17" fill="#c62828" text-anchor="start" font-weight="700">Without the kit</text>
+<rect x="25" y="44" width="240" height="112" rx="8" fill="#fdecea" stroke="#c62828" stroke-width="1.5"/>
+<text x="145" y="87" font-size="16" font-weight="700">Commit</text>
+<text x="145" y="106.4" font-size="13.5">Agent commits under its own</text>
+<text x="145" y="125.1" font-size="13.5">identity, with no sign-off</text>
+<rect x="295" y="44" width="240" height="112" rx="8" fill="#fdecea" stroke="#c62828" stroke-width="1.5"/>
+<text x="415" y="87" font-size="16" font-weight="700">PR text</text>
+<text x="415" y="106.4" font-size="13.5">Agent writes the description</text>
+<text x="415" y="125.1" font-size="13.5">and the rationale itself</text>
+<rect x="565" y="44" width="240" height="112" rx="8" fill="#fdecea" stroke="#c62828" stroke-width="1.5"/>
+<text x="685" y="87" font-size="16" font-weight="700">Submit</text>
+<text x="685" y="106.4" font-size="13.5">Agent opens the pull request</text>
+<text x="685" y="125.1" font-size="13.5">without asking you first</text>
+<rect x="835" y="44" width="240" height="112" rx="8" fill="#fdecea" stroke="#c62828" stroke-width="1.5"/>
+<text x="955" y="87" font-size="16" font-weight="700">Result</text>
+<text x="955" y="106.4" font-size="13.5">DCO check fails; the maintainer</text>
+<text x="955" y="125.1" font-size="13.5">closes it without review</text>
+<path d="M265,100 L295,100" fill="none" stroke="#c62828" stroke-width="1.8" marker-end="url(#m0)"/>
+<path d="M535,100 L565,100" fill="none" stroke="#c62828" stroke-width="1.8" marker-end="url(#m0)"/>
+<path d="M805,100 L835,100" fill="none" stroke="#c62828" stroke-width="1.8" marker-end="url(#m0)"/>
+<text x="550" y="206" font-size="15" fill="#52606d" font-style="italic">Same agent, same task. The gates change what reaches the maintainer.</text>
+<text x="25" y="258" font-size="17" fill="#2e7d32" text-anchor="start" font-weight="700">With ros2-agent-kit</text>
+<rect x="25" y="272" width="240" height="112" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="145" y="315" font-size="16" font-weight="700">Commit · gate G1</text>
+<text x="145" y="334.4" font-size="13.5">Blocked until the author is you</text>
+<text x="145" y="353.1" font-size="13.5">and the sign-off is present</text>
+<rect x="295" y="272" width="240" height="112" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="415" y="315" font-size="16" font-weight="700">PR text · gate G4</text>
+<text x="415" y="334.4" font-size="13.5">Packet holds facts and disclosure;</text>
+<text x="415" y="353.1" font-size="13.5">the description is left to you</text>
+<rect x="565" y="272" width="240" height="112" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="685" y="315" font-size="16" font-weight="700">Submit · gate G3</text>
+<text x="685" y="334.4" font-size="13.5">Agent submits only after</text>
+<text x="685" y="353.1" font-size="13.5">you confirm the command</text>
+<rect x="835" y="272" width="240" height="112" rx="8" fill="#e6f4ea" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="955" y="315" font-size="16" font-weight="700">Result</text>
+<text x="955" y="334.4" font-size="13.5">PR passes DCO and policy;</text>
+<text x="955" y="353.1" font-size="13.5">review starts</text>
+<path d="M265,328 L295,328" fill="none" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#m1)"/>
+<path d="M535,328 L565,328" fill="none" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#m1)"/>
+<path d="M805,328 L835,328" fill="none" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#m1)"/>
+</svg>

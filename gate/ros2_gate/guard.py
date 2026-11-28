@@ -31,15 +31,23 @@ from .profile import Profile
 
 ALLOW = 'allow'
 BLOCK = 'block'
+ASK = 'ask'  # allowed only after the human confirms the exact command
 
 _SEPARATORS = {'&&', '||', ';', '|', '(', ')', '&', ';;'}
 
-# gh subcommands that create or change content on GitHub (G3).
-_GH_PR_MUTATIONS = {'create', 'comment', 'review', 'edit', 'close', 'reopen', 'merge', 'ready',
-                    'lock', 'unlock', 'update-branch'}
-_GH_ISSUE_MUTATIONS = {'create', 'comment', 'edit', 'close', 'reopen', 'delete', 'pin', 'unpin',
-                       'transfer', 'lock', 'unlock', 'develop'}
+# gh subcommands that create or change content on GitHub (G3), in two kinds.
+# Submission creates or changes a pull request or an issue: the human wrote the text and
+# stays responsible, so the agent may run the command once the human confirms it.
+# Discussion posts a comment or a review, which the OSRF policy reserves for the human.
+_GH_PR_SUBMISSION = {'create', 'edit', 'close', 'reopen', 'merge', 'ready', 'lock', 'unlock',
+                     'update-branch'}
+_GH_PR_DISCUSSION = {'comment', 'review'}
+_GH_ISSUE_SUBMISSION = {'create', 'edit', 'close', 'reopen', 'delete', 'pin', 'unpin',
+                        'transfer', 'lock', 'unlock', 'develop'}
+_GH_ISSUE_DISCUSSION = {'comment'}
+_GH_COMMENTING_VERBS = {'close', 'reopen'}  # these accept -c/--comment and then post a reply
 _GH_API_BODY_FLAGS = {'-f', '--raw-field', '-F', '--field', '--input'}
+_GH_API_DISCUSSION_WORDS = ('comment', 'review', 'replies', 'reaction')
 _GIT_COMMIT_VALUE_FLAGS = {'-m', '--message', '-F', '--file', '-C', '--reuse-message',
                            '-c', '--reedit-message', '--author', '--date', '-t', '--template',
                            '--fixup', '--squash', '--trailer', '--cleanup', '--pathspec-from-file'}
@@ -55,6 +63,10 @@ class Decision:
     @property
     def allowed(self) -> bool:
         return self.decision == ALLOW
+
+    @property
+    def needs_confirmation(self) -> bool:
+        return self.decision == ASK
 
     def to_dict(self) -> dict:
         d = {'decision': self.decision}
@@ -320,31 +332,72 @@ def _gh_api_is_mutation(args: List[str]) -> bool:
     return method != 'GET'
 
 
-def _guard_gh(tokens: List[str], profile: Profile) -> Decision:
-    if profile.rule('authorship.agent_may_post', True):
-        return Decision(ALLOW)
+def _gh_api_is_discussion(args: List[str]) -> bool:
+    """A mutating gh api call that touches comments or reviews, judged by its visible text."""
+    joined = ' '.join(args).lower()
+    return any(word in joined for word in _GH_API_DISCUSSION_WORDS)
+
+
+def _has_comment_flag(tokens: List[str]) -> bool:
+    return any(t in ('-c', '--comment') or t.startswith('--comment=') for t in tokens)
+
+
+def _classify_gh(tokens: List[str]) -> Tuple[Optional[str], str]:
+    """Return ``(kind, description)``; kind is ``submission``, ``discussion``, or None."""
     positional = [t for t in tokens[1:] if not t.startswith('-')]
-    if len(positional) < 1:
-        return Decision(ALLOW)
+    if not positional:
+        return None, ''
     group = positional[0]
     verb = positional[1] if len(positional) > 1 else ''
-    human = ('the profile requires the human to write and submit this; prepare the text in a '
-             'local file, show the exact command, and let the human run it')
-    if group == 'pr' and verb in _GH_PR_MUTATIONS:
-        return Decision(BLOCK, 'G3', f'gh pr {verb} is not allowed for an agent under profile '
-                                     f'{profile.id}: {human}')
-    if group == 'issue' and verb in _GH_ISSUE_MUTATIONS:
-        return Decision(BLOCK, 'G3', f'gh issue {verb} is not allowed for an agent under profile '
-                                     f'{profile.id}: {human}')
+    for name, submission, discussion in (('pr', _GH_PR_SUBMISSION, _GH_PR_DISCUSSION),
+                                         ('issue', _GH_ISSUE_SUBMISSION, _GH_ISSUE_DISCUSSION)):
+        if group != name:
+            continue
+        if verb in discussion:
+            return 'discussion', f'gh {name} {verb}'
+        if verb in submission:
+            if verb in _GH_COMMENTING_VERBS and _has_comment_flag(tokens):
+                return 'discussion', f'gh {name} {verb} with a comment'
+            return 'submission', f'gh {name} {verb}'
     if group == 'api' and _gh_api_is_mutation(tokens[2:]):
-        return Decision(BLOCK, 'G3', f'mutating gh api calls are not allowed for an agent under '
-                                     f'profile {profile.id}: {human}')
-    return Decision(ALLOW)
+        if _gh_api_is_discussion(tokens[2:]):
+            return 'discussion', 'a gh api call that writes a comment or a review'
+        return 'submission', 'a mutating gh api call'
+    return None, ''
+
+
+def _guard_gh(tokens: List[str], profile: Profile) -> Decision:
+    """G3: what the agent may send to GitHub, and whether the human confirms it first."""
+    kind, what = _classify_gh(tokens)
+    if kind is None:
+        return Decision(ALLOW)
+    mode = profile.posting(kind)
+    if mode == 'allow':
+        return Decision(ALLOW)
+    if mode == 'confirm':
+        if kind == 'submission':
+            duty = ('by confirming, the human states that they wrote the description, understand '
+                    'every change, and verified it')
+        else:
+            duty = 'by confirming, the human states that they wrote this text by hand'
+        return Decision(ASK, 'G3', f"{what} goes out under the human's name, so profile "
+                                   f'{profile.id} requires the human to confirm the exact '
+                                   f'command first; {duty}')
+    if kind == 'discussion':
+        return Decision(BLOCK, 'G3', f'{what} is not allowed for an agent under profile '
+                                     f'{profile.id}: replies in a review or an issue thread are '
+                                     "the human's to write by hand and to post; tell the human "
+                                     'what was done and let them reply')
+    return Decision(BLOCK, 'G3', f'{what} is not allowed for an agent under profile '
+                                 f'{profile.id}: the profile requires the human to write and '
+                                 'submit this; prepare the text in a local file, show the exact '
+                                 'command, and let the human run it')
 
 
 def guard(command: str, profile: Profile, identities: AgentIdentities,
           cwd: Optional[str] = None) -> Decision:
-    """Return the first blocking decision for any simple command in ``command``."""
+    """Decide on a command line: the first block wins, then the first ask, else allow."""
+    pending: Optional[Decision] = None
     for seg in segments(command):
         seg = _strip_prefixes(seg)
         if not seg:
@@ -353,16 +406,18 @@ def guard(command: str, profile: Profile, identities: AgentIdentities,
         if prog in ('bash', 'sh', 'zsh') and '-c' in seg:
             inner = seg[seg.index('-c') + 1] if seg.index('-c') + 1 < len(seg) else ''
             d = guard(inner, profile, identities, cwd)
-            if not d.allowed:
-                return d
-            continue
-        if prog == 'git':
+        elif prog == 'git':
             d = _guard_git(seg, profile, identities, cwd)
         elif prog == 'gh':
             d = _guard_gh(seg, profile)
         else:
             continue
-        if not d.allowed:
+        if d.allowed:
+            continue
+        if d.command is None:
             d.command = ' '.join(seg)
+        if not d.needs_confirmation:
             return d
-    return Decision(ALLOW)
+        if pending is None:
+            pending = d
+    return pending or Decision(ALLOW)

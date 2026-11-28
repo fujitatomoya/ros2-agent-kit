@@ -1,7 +1,7 @@
 {
   "name": "ros2",
   "version": "0.4.0",
-  "description": "ROS 2 development and contribution-compliance kit: policy-aware gates for DCO sign-off, AI disclosure, and human-only PR and issue submission, plus ROS 2 skills.",
+  "description": "ROS 2 development and contribution-compliance kit: policy-aware gates for DCO sign-off, AI disclosure, and human-confirmed PR and issue submission, plus ROS 2 skills.",
   "author": {
     "name": "Tomoya Fujita",
     "url": "https://github.com/fujitatomoya"

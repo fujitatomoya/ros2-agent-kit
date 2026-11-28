@@ -19,7 +19,9 @@ Gemini reads the hook payload as JSON on stdin and expects a single JSON object
 on stdout; plain text must go to stderr. Events handled:
 
   SessionStart -> G5, additionalContext with the active profile
-  BeforeTool   -> G1 and G3 on run_shell_command, decision deny with the reason
+  BeforeTool   -> G1, G2 and G3 on run_shell_command, decision deny with the reason;
+                  a command that needs the human's confirmation is denied too, with the
+                  command for the human to run
   AfterTool    -> G4 on write_file/replace/edit of PR_BODY.md or ISSUE_BODY.md
 """
 
@@ -71,6 +73,15 @@ def main() -> int:
             d = guard.guard(command, prof, identities, cwd)
             if d.allowed:
                 return 0
+            if d.needs_confirmation:
+                # Gemini CLI documents only allow and deny for BeforeTool, so the human runs
+                # a command that needs confirmation.
+                return emit({'decision': 'deny',
+                             'reason': f'ros2-gate {d.gate} needs the human to confirm '
+                                       f'`{d.command}`: {d.reason}. This harness has no '
+                                       'documented way to show a confirmation prompt from a '
+                                       'hook, so show the human the exact command and let them '
+                                       'run it.'})
             return emit({'decision': 'deny',
                          'reason': f'ros2-gate {d.gate} blocked `{d.command}`: {d.reason}'})
         if event == 'AfterTool':

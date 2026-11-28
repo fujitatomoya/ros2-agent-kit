@@ -11,8 +11,9 @@ The linked documents win when this summary and they disagree.
   They must understand every line they submit and be able to explain it in review.
 - You may write code, tests, and documentation.
   You do not write the pull request description, the issue text, or replies in reviews, Discourse, or Zulip.
-- You do not open pull requests or issues and you do not post comments.
-  Prepare the text locally and let the human submit it.
+- You open or change a pull request or an issue only after the human confirms the exact command.
+  By confirming, the human states that they wrote the description, understand every change, and verified it.
+- You do not post comments or reviews; replies are the human's to write by hand and to post.
 
 ## Sign-off and disclosure
 
